@@ -5,7 +5,9 @@
 2. Khi chọn partition xong thì xây hết directory tree của partition đó luôn (giữ thông tin các file, folder và data nếu là text {nếu không phải text thì None => cho chọn tool đọc})
 
 3. Khi implement, các class có AbstractClass làm interface (như OSItem đại diện cho OSFile và OSFolder) khi có thêm các properties riêng thì cần note ra và chú thích tương tự như template có sẵn. Cú pháp:
-    tên_biến        = giá_trị_mặc_định_của_datatype        # [datatype] chức năng
+    ```python
+    var_name    = initial_value_represent_the_datatype       # [datatype] chức năng
+    ```
 
     có gì tab cho đều đẹp dễ đọc :))
 

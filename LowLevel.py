@@ -5,26 +5,15 @@
 
 def HexToDec(hex: str) -> int:
     """
-        chuyển từ [str] hexadecimal sang [int] decimal
+        nhận [str] hexadecimal và trả về [int] decimal
     """
     return int(hex, 16)
 
-def readSector(diskpath, nsector, beginSector = 0, bytePerSector = 512):
+def readSector(fileobject, nsector, beginSector = 0, bytePerSector = 512):
     """
-        đọc `nsector` trong partition của `diskpath`, bắt đầu từ sector `beginSector` (0-based). Mặc định mỗi sector lá 512 bytes
+        đọc `nsector` trong partition của `fileobject`, bắt đầu từ sector `beginSector` (0-based: sector đầu tiên là sector số 0). Mặc định mỗi sector lá 512 bytes
+
+        lưu ý: trước khi gọi hàm thì người dùng tự mở file/ổ đĩa sau đó truyền hẳn file object vào
     """
-    with open(diskpath, 'rb') as f:
-        f.seek(beginSector * bytePerSector)
-        f.read(nsector * bytePerSector)
-
-
-def readBytes(diskpath: str, offset = 0, nBytes = 1):
-    """
-        đọc `nBytes` byte (mặc định là đọc 1byte) từ ổ đĩa `diskpath`, bắt đầu offset `offset`
-    """
-    with open(diskpath, 'rb') as f:
-        pass
-
-def accessDirectoryTree():
-    pass
-
+    fileobject.seek(beginSector * bytePerSector)
+    fileobject.read(nsector * bytePerSector)
