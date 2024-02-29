@@ -16,4 +16,4 @@ def readSector(fileobject, nsector, beginSector = 0, bytePerSector = 512):
         lưu ý: trước khi gọi hàm thì người dùng tự mở file/ổ đĩa sau đó truyền hẳn file object vào
     """
     fileobject.seek(beginSector * bytePerSector)
-    fileobject.read(nsector * bytePerSector)
+    return fileobject.read(nsector * bytePerSector)

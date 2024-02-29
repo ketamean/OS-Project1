@@ -1,6 +1,6 @@
 import OSItem
 import LowLevel
-import PartitionType
+import AbstractPartition
 class Navigator:
     """
         class này là interface để GUI gọi và thực hiện các chức năng của chương trình
