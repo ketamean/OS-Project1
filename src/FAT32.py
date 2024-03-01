@@ -1,6 +1,7 @@
-import AbstractPartition
+import AbstractVolume
+from AbstractVolume import AbstractVolume
 
-class FAT32(AbstractPartition):
+class FAT32(AbstractVolume):
     """ ngoài các properties kế thừa từ parent class, class FAT32 còn có thêm các properties
     
     nFatTable               = 0         # [int] số bảng FAT
