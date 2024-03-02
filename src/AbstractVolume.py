@@ -1,4 +1,4 @@
-class AbstractPartition:
+class AbstractVolume:
     """
         đây là abstract class đại diện cho các loại partition: FAT32, NTFS
 
