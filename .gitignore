@@ -52,4 +52,5 @@ docs/_build/
 
 # test data
 src/test/
+src/__pycache__/
 src/test.py
