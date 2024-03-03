@@ -1,6 +1,6 @@
-import AbstractPartition
+import AbstractVolume
 
-class NTFS(AbstractPartition):
+class NTFS(AbstractVolume):
     # def __new__(cls):
     #     return super().__new__()
     def __init__(self) -> None:
