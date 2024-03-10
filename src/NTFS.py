@@ -283,8 +283,7 @@ class MFTEntry:
         if attr_resident:
             begin_content   = int.from_bytes(bytes=attr_buffer[20:22], byteorder='little')
             content_size    = int.from_bytes(bytes=attr_buffer[16:20], byteorder='little')
-            print(attr_buffer[begin_content:begin_content + content_size])
-            self.data       = attr_buffer[begin_content:begin_content + content_size].decode('ascii')
+            self.data       = attr_buffer[begin_content:begin_content + content_size].decode('utf-8')
         else:
             lcn             = 0     # logical cluster number of the volume
             datarun_offset  = int.from_bytes(bytes=attr_buffer[0x20:0x22], byteorder='little')
@@ -293,7 +292,7 @@ class MFTEntry:
                 # returns ncluster, lcn, new_offset_datarun
                 header      = int.from_bytes(bytes=attr_buffer[offset_byte:offset_byte + 1], byteorder='little')
                 size_len    = (header & 0x0F)
-                size_offset = (header & 0xF0) >> 4                
+                size_offset = (header & 0xF0) >> 4
                 length      = int.from_bytes(bytes=attr_buffer[offset_byte + 1:offset_byte + 1 + size_len], byteorder='little')
                 if size_offset == 0:
                     vcn     = 0
@@ -314,7 +313,7 @@ class MFTEntry:
                     beginSector=lcn * self.__byte_per_cluster // self.__byte_per_sector,
                     bytePerSector=self.__byte_per_sector
                 )
-                self.data   += raw_data.decode('ascii')
+                self.data   += raw_data.decode('utf-8')
 
     def __parse_filename(self, attr_buffer):
         """
@@ -486,7 +485,7 @@ class NTFS(AbstractVolume):
                     )
                 else:
                     ositem = OSFile(
-                        name=entry.name,
+                        name=entry.name if entry.name.rfind('.') < 0 else entry.name[:entry.name.rfind('.')],
                         extension=get_file_extension(entry.name),
                         status=MFTEntry.entryStatus_to_ositemStatus(entry.status),
                         createdDate_day=entry.createdDate['day'],
@@ -542,20 +541,7 @@ class NTFS(AbstractVolume):
 
     def __build(self):
         self.__build_ositem_relation()
-        # for id, ositem in self.__id_to_ositem.items():
-        #     print("entry:", id)
-        #     print('>', self.__id_to_entry[id].parent_id)
         self.__build_directory_tree()
-        # # test
-        # for key, val in self.__id_to_entry.items():
-        #     # if val.parent_id == 5:
-        #     #     if val.is_dir:
-        #     #         print('dir', end=' ')
-        #     #     print(val.name)
-        #     print(key, val.name)
-        #     print('\t> dir?', val.is_dir)
-        #     if val.data:
-        #         print('\t>', val.data)
 
     def getInfo(self):
         res = super().getInfo()
