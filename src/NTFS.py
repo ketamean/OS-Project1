@@ -257,17 +257,17 @@ class MFTEntry:
 
     def __parse_data(self, attr_buffer):
         """
-            parse data part of a file
+            parse data attribute of a file record
         """
         # double check
         if int.from_bytes(bytes=attr_buffer[0x00:0x04], byteorder='little') != 0x80:
             return
-        attr_nonresident    = int(attr_buffer[8:9].hex(), 16)
-        if attr_nonresident:
+        attr_resident    = not bool(attr_buffer[8])
+        if not attr_resident:
             self.data_alloc_size    = int.from_bytes(bytes=attr_buffer[0x28:0x28 + 8], byteorder='little')
             self.data_real_size     = int.from_bytes(bytes=attr_buffer[0x30:0x30 + 8], byteorder='little')
             self.data_init_size     = int.from_bytes(bytes=attr_buffer[0x38:0x38 + 8], byteorder='little')
-
+        ############################################################
         def isTextFile(filename: str):
             if filename and filename.endswith('.txt'):
                 return True
@@ -280,34 +280,33 @@ class MFTEntry:
         self.readable       = True
         self.data           = ''
         
-        if not attr_nonresident:
-            begin_content   = int.from_bytes(bytes=attr_buffer[32:34], byteorder='little')
-            content_size    = int.from_bytes(bytes=attr_buffer[32:36], byteorder='little')
-            self.data       = attr_buffer[begin_content:begin_content + content_size].decode('utf-16-le')
-        else:
+        if attr_resident:
             begin_content   = int.from_bytes(bytes=attr_buffer[20:22], byteorder='little')
-            lcn             = None  # logical cluster number of the volume
+            content_size    = int.from_bytes(bytes=attr_buffer[16:20], byteorder='little')
+            print(attr_buffer[begin_content:begin_content + content_size])
+            self.data       = attr_buffer[begin_content:begin_content + content_size].decode('ascii')
+        else:
+            lcn             = 0     # logical cluster number of the volume
             datarun_offset  = int.from_bytes(bytes=attr_buffer[0x20:0x22], byteorder='little')
             cluster_list    = []    # (lcn, ncluster from that point)
             def readRun(offset_byte):
                 # returns ncluster, lcn, new_offset_datarun
-                nonlocal lcn
                 header      = int.from_bytes(bytes=attr_buffer[offset_byte:offset_byte + 1], byteorder='little')
-                size_len    = ((header & 0x0F) << 4) >> 4
-                size_offset = (header & 0xF0) >> 4
-                length      = int.from_bytes(bytes=attr_buffer[offset_byte + 1:offset_byte + size_len], byteorder='little')
-                if lcn == None:
-                    lcn     = int.from_bytes(bytes=attr_buffer[offset_byte + size_len:offset_byte + size_offset])
-                    offset  = lcn
+                size_len    = (header & 0x0F)
+                size_offset = (header & 0xF0) >> 4                
+                length      = int.from_bytes(bytes=attr_buffer[offset_byte + 1:offset_byte + 1 + size_len], byteorder='little')
+                if size_offset == 0:
+                    vcn     = 0
                 else:
-                    offset  = lcn + int.from_bytes(bytes=attr_buffer[offset_byte + size_len:offset_byte + size_offset])
-                return length, offset, offset_byte + size_offset
+                    vcn     = int.from_bytes(bytes=attr_buffer[offset_byte + 1 + size_len:offset_byte + 1 + size_len + size_offset], byteorder='little', signed=True)
+                return length, vcn, offset_byte + size_offset + size_len + 1
 
-            
-            while datarun_offset + 2 < len(attr_buffer) and attr_buffer[datarun_offset] != 0:
-                ncluster, lcn, datarun_offset = readRun(datarun_offset)
-                cluster_list.append( (ncluster, lcn) )
-            print(cluster_list)
+            while datarun_offset < len(attr_buffer) and attr_buffer[datarun_offset] != 0:
+                ncluster, vcn, datarun_offset = readRun(datarun_offset)
+                # vcn can be negative
+                if vcn != 0:
+                    lcn += vcn
+                    cluster_list.append( (ncluster, lcn) )
             for ncluster, lcn in cluster_list:
                 raw_data    = readSector(
                     fileobject=self.__disk_obejct,
@@ -315,7 +314,7 @@ class MFTEntry:
                     beginSector=lcn * self.__byte_per_cluster // self.__byte_per_sector,
                     bytePerSector=self.__byte_per_sector
                 )
-                self.data   += raw_data.decode('utf-16-le')
+                self.data   += raw_data.decode('ascii')
 
     def __parse_filename(self, attr_buffer):
         """
@@ -504,7 +503,8 @@ class NTFS(AbstractVolume):
                         latestModificationDay_month=entry.latestModificationDay['month'],
                         latestModificationDay_year=entry.latestModificationDay['year'],
                         idxStartingCluster=self.startingClusterMFT + entry.id * ((self.nBytesPerFileRecord // self.nBytesPerSector) // self.nSectorsPerCluster),
-                        size=entry.alloc_size
+                        size=entry.alloc_size,
+                        data=entry.data
                     )
                 self.__id_to_ositem[entry.id]   = ositem
                 self.__ositem_to_id[ositem]     = entry.id     
@@ -533,7 +533,7 @@ class NTFS(AbstractVolume):
                 continue
             try:
                 parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
-                print(ositem.name, 'in', parent_ositem.name)
+                # print(ositem.name, 'in', parent_ositem.name)
                 parent_ositem.children.append(ositem)
             except:
                 pass
@@ -542,20 +542,20 @@ class NTFS(AbstractVolume):
 
     def __build(self):
         self.__build_ositem_relation()
-        for id, ositem in self.__id_to_ositem.items():
-            print("entry:", id)
-            print('>', self.__id_to_entry[id].parent_id)
+        # for id, ositem in self.__id_to_ositem.items():
+        #     print("entry:", id)
+        #     print('>', self.__id_to_entry[id].parent_id)
         self.__build_directory_tree()
-        # test
-        for key, val in self.__id_to_entry.items():
-            # if val.parent_id == 5:
-            #     if val.is_dir:
-            #         print('dir', end=' ')
-            #     print(val.name)
-            print(key, val.name)
-            print('\t> dir?', val.is_dir)
-            if val.data:
-                print('\t>', val.data)
+        # # test
+        # for key, val in self.__id_to_entry.items():
+        #     # if val.parent_id == 5:
+        #     #     if val.is_dir:
+        #     #         print('dir', end=' ')
+        #     #     print(val.name)
+        #     print(key, val.name)
+        #     print('\t> dir?', val.is_dir)
+        #     if val.data:
+        #         print('\t>', val.data)
 
     def getInfo(self):
         res = super().getInfo()
@@ -573,10 +573,9 @@ class NTFS(AbstractVolume):
         return self.__root
 
 if __name__ == '__main__':
-    # \\\\.\\D:
     with open('\\\\.\\D:', 'rb') as f:
         tmp = NTFS(f)
         root = tmp.getDirectoryTree()
+
+        # test
         root.access(0)
-        # for prop, val in vars(tmp).items():
-        #     print(prop, val)

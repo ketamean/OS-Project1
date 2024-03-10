@@ -108,19 +108,20 @@ class OSFile(OSItem):
     """ ngoài các properties kế thừa từ parent class, class OSFile còn có thêm các properties
     
     extension       = ''      # [str] phần mở rộng của tập tin
+    data            = ''      # [str] nội dung tập tin nếu phần mở rộng là .txt
     """
-    def __init__(self, name: str, extension: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
+    def __init__(self, name: str, extension: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int, data: str) -> None:
         if not isinstance(extension, str):
             raise TypeError("Cannot init OSFile: Wrong data type of parameters")
         self.extension = extension
+        self.data      = data
         super().__init__(name, status, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
     
     def access(self, lvl):
         # # these following commented lines are for testing
-        # print('open file: ', self.name, end='')
         tab = ''
         for i in range(lvl):
-            tab += '\t' 
+            tab += '\t'
         print(tab + self.name)
         pass
 
@@ -143,11 +144,6 @@ class OSFolder(OSItem):
     
     def access(self, lvl):
         # # these following commented lines are for testing
-        # print('open folder: ', self.name, ', contains: [', end='')
-        # for i in self.children:
-        #     i.access()
-        #     print(',', end='')
-        # print(']',end='')
         tab = ''
         for i in range(lvl):
             tab += '\t' 
