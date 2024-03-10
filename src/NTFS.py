@@ -75,6 +75,8 @@ class MFTEntry:
         1   : 'H',  # Hidden
         2   : 'S',  # System
         5   : 'A',  # Archvie
+
+        # these following flags will be ignored
         6   : 'D',      # Device
         7   : 'N',      # Normal
         8   : 'T',      # Temporary
@@ -92,6 +94,13 @@ class MFTEntry:
         if name == None:
             raise ValueError(f'Attribute Code: The value {code} does not correspond to any attribute.')
         return name
+
+    @staticmethod
+    def entryStatus_to_ositemStatus(status):
+        res = ''
+        for i in status:
+            res += str(i)
+        return res
     
     @staticmethod
     def __convert_flag_to_status(flag):
@@ -108,18 +117,20 @@ class MFTEntry:
             if i == '1':
                 n += 1
         for i in MFTEntry.FILE_NAME_FLAG.keys():
+            if i > 5:
+                break
             if flag[len(flag) - 1 - i] == '1':
                 # the ith bit from the right (0-based: the rightmost bit is the 0th bit)
                 res.append(MFTEntry.FILE_NAME_FLAG[i])
         return res
         
-    @staticmethod
-    def header_entry_flags(bytes):
-        """
-            return flag is_used, is_dir
-        """
-        flag = HexToBin(bytes.hex())
-        return (flag[0] == 1), (flag[1] == 1)
+    # @staticmethod
+    # def header_entry_flags(bytes):
+    #     """
+    #         return flag is_used, is_dir
+    #     """
+    #     flag = HexToBin(bytes.hex())
+    #     return (flag[0] == 1), (flag[1] == 1)
     
 
     def __init__(self, buffer, byte_per_record, fileobj, byte_per_cluster, byte_per_sector) -> None:
@@ -235,7 +246,7 @@ class MFTEntry:
         # relative offset of the first attribute in the current record
         self.offset_first_attr  = int.from_bytes(bytes=buffer[0x14:0x14 + 2], byteorder='little')
         # flags on the header of the MFT file record
-        self.is_used,self.is_dir= MFTEntry.header_entry_flags(buffer[22:24])
+        # self.is_used,self.is_dir= MFTEntry.header_entry_flags(buffer[22:24])
         # number of bytes the current record occupies
         self.used_size          = int.from_bytes(bytes=buffer[24:28], byteorder='little')
         self.alloc_size         = int.from_bytes(bytes=buffer[28:32], byteorder='little')
@@ -345,9 +356,12 @@ class MFTEntry:
         elif attr_type == '$DATA':
             # resident or non-resident
             self.__parse_data(attr_buffer=buffer)
+        elif attr_type == '$INDEX_ROOT' or attr_type == '$INDEX_ALLOCATION' or attr_type == '$BITMAP':
+            self.is_dir = True
 
     def __parse_entry(self):
         succ                    = self.__parse_entry_header()
+        self.is_dir             = False # initially False
         if succ == False:
             return
         buffer                  = self.__buffer
@@ -403,23 +417,31 @@ class NTFS(AbstractVolume):
         self.__disk_object  = fileobj
         self.volume_name    = ''
 
-        self.id_to_entry    = {}    # [dict] map an entry's id with the object entry
-        self.entry_to_id    = {}    # [dict] map an entry with its id
-        self.root           = None  # [OSFolder] the root directory as an OSFolder
+        self.__id_to_entry    = {}    # [dict] map an entry's id with the object entry
+        self.__entry_to_id    = {}    # [dict] map an entry with its id
+        self.__root         = None  # [OSFolder] the root directory as an OSFolder
                                     # these the above 2 properties are used for building directory tree
         
         self.__readVBR( beginsectorVBR=beginsector_vbr )
-        self.__readMFT()
+        self.__build()
 
     def __clusterToSector(self, ncluster) -> int:
         return self.nSectorsPerCluster * ncluster
-
-    def __build_entry_tree(self):
+    
+    def __build_ositem_relation(self):
+        """
+            read all entries/file record in MFT and build relations of OSItem in the directory tree 
+        """
+        def get_file_extension(name: str):
+            return name[name.rfind('.') + 1:]
         n_entry             = 1
         cnt                 = 0
-        self.id_to_entry    = {}    # [dict] map an entry's id with the object entry
-        self.entry_to_id    = {}    # [dict] map an entry with its id
-        while n_entry > 0 and cnt < 10000:
+        self.__id_to_ositem = {}    # [dict] map an ositem's id with an ositem object (osfile or osfolder)
+        self.__ositem_to_id = {}    # [dict] map an ositem with its id
+        self.__id_to_entry  = {}    # [dict] map an entry's id with an entry object
+        self.__entry_to_id  = {}    # [dict] map an entry with its id
+
+        while n_entry > 0:
             buffer = readSector(
                 fileobject=self.__disk_object,
                 nsector=self.nBytesPerFileRecord // self.nBytesPerSector,
@@ -435,10 +457,58 @@ class NTFS(AbstractVolume):
                 byte_per_sector=self.nBytesPerSector
             )
 
-            if entry.id and entry.id >= 24 and entry.parent_id and (entry.parent_id > 24 or entry.parent_id == 5):
-                self.id_to_entry[entry.id]  = entry
-                self.entry_to_id[entry]     = entry.id
-            
+            if entry.id and (entry.id >= 24 or entry.id == 5) and entry.parent_id and (entry.parent_id >= 24 or entry.parent_id == 5):
+                """
+                    đây là lớp lọc thứ nhất khi đọc entry và thành lập các ositem
+
+                    trong đây vẫn sẽ còn sót lại một số trường hợp mà các parent folder nằm trong một folder lớn hơn có id != 5 và < 24 (đây là vùng cấm; ordinary folder and file sẽ có id >= 24) dẫn đến việc những item đó không có parent => error => những item này sẽ được loại bỏ ở sau
+                """
+                self.__id_to_entry[entry.id]    = entry
+                self.__entry_to_id[entry]       = entry.id
+                if entry.is_dir:
+                    ositem = OSFolder(
+                        name=entry.name,
+                        status=MFTEntry.entryStatus_to_ositemStatus(entry.status),
+                        createdDate_day=entry.createdDate['day'],
+                        createdDate_month=entry.createdDate['month'],
+                        createdDate_year=entry.createdDate['year'],
+                        createdTime_hour=entry.createdTime['hour'],
+                        createdTime_minute=entry.createdTime['minute'],
+                        createdTime_second=entry.createdTime['second'],
+                        createdTime_millisecond=entry.createdTime['millisecond'],
+                        latestAccessDay_day=entry.latestAccessDay['day'],
+                        latestAccessDay_month=entry.latestAccessDay['month'],
+                        latestAccessDay_year=entry.latestAccessDay['year'],
+                        latestModificationDay_day=entry.latestModificationDay['day'],
+                        latestModificationDay_month=entry.latestModificationDay['month'],
+                        latestModificationDay_year=entry.latestModificationDay['year'],
+                        idxStartingCluster=self.startingClusterMFT + entry.id * ((self.nBytesPerFileRecord // self.nBytesPerSector) // self.nSectorsPerCluster),
+                        size=entry.alloc_size
+                    )
+                else:
+                    ositem = OSFile(
+                        name=entry.name,
+                        extension=get_file_extension(entry.name),
+                        status=MFTEntry.entryStatus_to_ositemStatus(entry.status),
+                        createdDate_day=entry.createdDate['day'],
+                        createdDate_month=entry.createdDate['month'],
+                        createdDate_year=entry.createdDate['year'],
+                        createdTime_hour=entry.createdTime['hour'],
+                        createdTime_minute=entry.createdTime['minute'],
+                        createdTime_second=entry.createdTime['second'],
+                        createdTime_millisecond=entry.createdTime['millisecond'],
+                        latestAccessDay_day=entry.latestAccessDay['day'],
+                        latestAccessDay_month=entry.latestAccessDay['month'],
+                        latestAccessDay_year=entry.latestAccessDay['year'],
+                        latestModificationDay_day=entry.latestModificationDay['day'],
+                        latestModificationDay_month=entry.latestModificationDay['month'],
+                        latestModificationDay_year=entry.latestModificationDay['year'],
+                        idxStartingCluster=self.startingClusterMFT + entry.id * ((self.nBytesPerFileRecord // self.nBytesPerSector) // self.nSectorsPerCluster),
+                        size=entry.alloc_size
+                    )
+                self.__id_to_ositem[entry.id]   = ositem
+                self.__ositem_to_id[ositem]     = entry.id     
+
             if entry.volume_name:
                 self.volume_name    = entry.volume_name
             if entry.name == '$MFT':
@@ -449,27 +519,41 @@ class NTFS(AbstractVolume):
 
             # print(entry.name)
             # print('\t >', entry.status)
-    
+
+
     def __build_directory_tree(self):
-        # root_dir_entry  = self.id_to_entry[5]
-        # root_dir_entry = MFTEntry()
-        # self.root   = OSFolder(
-        #     name=root_dir_entry.name,
-        #     status=
-        # )
-        pass
+        """
+            build the directory tree of the current volume instance
+        """
+        # root folder is the 5th entry (0-based) in the NTFS MFT
+        self.__id_to_ositem[5].name = self.volume_name
 
-    def __readMFT(self):
-        self.__build_entry_tree()
+        for id, ositem in self.__id_to_ositem.items():
+            if id == 5:
+                continue
+            try:
+                parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
+                print(ositem.name, 'in', parent_ositem.name)
+                parent_ositem.children.append(ositem)
+            except:
+                pass
+        
+        self.__root = self.__id_to_ositem[5]
 
+    def __build(self):
+        self.__build_ositem_relation()
+        for id, ositem in self.__id_to_ositem.items():
+            print("entry:", id)
+            print('>', self.__id_to_entry[id].parent_id)
+        self.__build_directory_tree()
         # test
-        for key, val in self.id_to_entry.items():
+        for key, val in self.__id_to_entry.items():
             # if val.parent_id == 5:
             #     if val.is_dir:
             #         print('dir', end=' ')
             #     print(val.name)
             print(key, val.name)
-            print('\t>', val.status)
+            print('\t> dir?', val.is_dir)
             if val.data:
                 print('\t>', val.data)
 
@@ -482,10 +566,17 @@ class NTFS(AbstractVolume):
         res['volumeSerialNum']          = self.volumeSerialNum
         return res
 
+    def getDirectoryTree(self):
+        """
+            get root folder of the current volume's directory tree
+        """
+        return self.__root
 
 if __name__ == '__main__':
     # \\\\.\\D:
     with open('\\\\.\\D:', 'rb') as f:
         tmp = NTFS(f)
+        root = tmp.getDirectoryTree()
+        root.access(0)
         # for prop, val in vars(tmp).items():
         #     print(prop, val)

@@ -7,7 +7,6 @@
 class OSItem(object):
     """ các properties của class này
     name                    = ''    # [str] tên file
-    nSectors                = 0     # [int] số sector OSItem chiếm
     status                  = ''    # [str] trạng thái (A/D/V/S/H/R)
                                     # A: archive, D: directory, V: vol lable, S: system, H: hidden, R: read only
     createdTime             = {     # [dict] giờ tạo
@@ -34,10 +33,9 @@ class OSItem(object):
     idxStartingCluster      = 0     # [int] cluster bắt đầu
     size                    = 0     # [int] kích thước
     """
-    def __init__(self, name: str, status: str, nSectors: int, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month:int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
+    def __init__(self, name: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month:int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
         if not (
             isinstance(name, str)                           and
-            isinstance(nSectors, int)                       and
             isinstance(status, str)                         and
             isinstance(createdTime_hour, int)               and
             isinstance(createdTime_minute, int)             and
@@ -57,7 +55,6 @@ class OSItem(object):
         ):
             raise TypeError("Cannot init OSItem: Wrong data type of parameters")
         self.name                           = name
-        self.nSectors                       = nSectors
         self.status                         = status
 
         self.createdTime                    = {}
@@ -90,7 +87,6 @@ class OSItem(object):
         """
         return {
             'name'                  : self.name,
-            'nSectors'              : self.nSectors,
             'status'                : self.status,
             'createdTime'           : self.createdTime,
             'createdDate'           : self.createdDate,
@@ -113,15 +109,19 @@ class OSFile(OSItem):
     
     extension       = ''      # [str] phần mở rộng của tập tin
     """
-    def __init__(self, name: str, extension: str, status: str, nSectors: int, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
+    def __init__(self, name: str, extension: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
         if not isinstance(extension, str):
             raise TypeError("Cannot init OSFile: Wrong data type of parameters")
         self.extension = extension
-        super().__init__(name, status, nSectors, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
+        super().__init__(name, status, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
     
-    def access(self):
+    def access(self, lvl):
         # # these following commented lines are for testing
         # print('open file: ', self.name, end='')
+        tab = ''
+        for i in range(lvl):
+            tab += '\t' 
+        print(tab + self.name)
         pass
 
     def getInfo(self):
@@ -134,20 +134,26 @@ class OSFolder(OSItem):
 
     children = []               # [list] danh sách các OSFile và OSFolder con trong một OSFolder lớn hơn
     """
-    def __init__(self, name: str, status: str, nSectors: int, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
+    def __init__(self, name: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
         self.children = []
-        super().__init__(name, status, nSectors, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)    
+        super().__init__(name, status, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)    
     
     def addChild(self, ositem: OSItem):
         self.children.append(ositem)
     
-    def access(self):
+    def access(self, lvl):
         # # these following commented lines are for testing
         # print('open folder: ', self.name, ', contains: [', end='')
         # for i in self.children:
         #     i.access()
         #     print(',', end='')
         # print(']',end='')
+        tab = ''
+        for i in range(lvl):
+            tab += '\t' 
+        print(tab + self.name)
+        for child in self.children:
+            child.access(lvl + 1)
         pass
 
 if __name__ == '__main__':
