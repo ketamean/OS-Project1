@@ -7,7 +7,6 @@
 class OSItem(object):
     """ các properties của class này
     name                    = ''    # [str] tên file
-    nSectors                = 0     # [int] số sector OSItem chiếm
     status                  = ''    # [str] trạng thái (A/D/V/S/H/R)
                                     # A: archive, D: directory, V: vol lable, S: system, H: hidden, R: read only
     createdTime             = {     # [dict] giờ tạo
@@ -109,18 +108,21 @@ class OSFile(OSItem):
     """ ngoài các properties kế thừa từ parent class, class OSFile còn có thêm các properties
     
     extension       = ''      # [str] phần mở rộng của tập tin
+    data            = ''      # [str] nội dung tập tin nếu phần mở rộng là .txt
     """
-    def __init__(self, name: str, extension: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int) -> None:
+    def __init__(self, name: str, extension: str, status: str, createdTime_hour: int, createdTime_minute: int, createdTime_second: int, createdTime_millisecond: int, createdDate_day: int, createdDate_month: int, createdDate_year: int, latestAccessDay_day: int, latestAccessDay_month: int, latestAccessDay_year: int, latestModificationDay_day: int, latestModificationDay_month: int, latestModificationDay_year: int, idxStartingCluster: int, size: int, data: str) -> None:
         if not isinstance(extension, str):
             raise TypeError("Cannot init OSFile: Wrong data type of parameters")
         self.extension = extension
+        self.data      = data
         super().__init__(name, status, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
     
     def access(self, lvl):
+        # # these following commented lines are for testing
         tab = ''
         for i in range(lvl):
-            tab += '\t' 
-        print(tab + self.name)
+            tab += '\t'
+        print(tab + self.name + '.' + self.extension, '>', len(self.data) if self.data else '')
         pass
 
     def getInfo(self):
@@ -141,6 +143,7 @@ class OSFolder(OSItem):
         self.children.append(ositem)
     
     def access(self, lvl):
+        # # these following commented lines are for testing
         tab = ''
         for i in range(lvl):
             tab += '\t' 
@@ -149,3 +152,12 @@ class OSFolder(OSItem):
             child.access(lvl + 1)
         pass
 
+if __name__ == '__main__':
+    # test initializers
+    print('Testing...')
+    file = OSFile('file_nek','.txt','',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+    folder = OSFolder('DIR','',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+    print("file: ", file.getInfo())
+    folder.addChild(file)
+    folder.access()
+    print('\nTested')
