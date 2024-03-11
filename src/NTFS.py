@@ -100,13 +100,13 @@ class MFTEntry:
                 res.append(MFTEntry.FILE_NAME_FLAG[i])
         return res
         
-    # @staticmethod
-    # def header_entry_flags(bytes):
-    #     """
-    #         return flag is_used, is_dir
-    #     """
-    #     flag = HexToBin(bytes.hex())
-    #     return (flag[0] == 1), (flag[1] == 1)
+    @staticmethod
+    def header_entry_flags(bytes):
+        """
+            return flag in_use, is_dir
+        """
+        n = int.from_bytes(bytes=bytes, byteorder='little')
+        return n & 0x01, (n & 0x02) >> 1
     
 
     def __init__(self, buffer, byte_per_record, fileobj, byte_per_cluster, byte_per_sector) -> None:
@@ -127,7 +127,7 @@ class MFTEntry:
         # in $STANDARD_INFORMATION
         self.signature              = ''
         self.offset_first_attr      = None
-        self.is_used                = None
+        self.in_use                = None
         self.is_dir                 = None
         self.used_size              = None
         self.alloc_size             = None
@@ -222,7 +222,7 @@ class MFTEntry:
         # relative offset of the first attribute in the current record
         self.offset_first_attr  = int.from_bytes(bytes=buffer[0x14:0x14 + 2], byteorder='little')
         # flags on the header of the MFT file record
-        # self.is_used,self.is_dir= MFTEntry.header_entry_flags(buffer[22:24])
+        self.in_use,self.is_dir= MFTEntry.header_entry_flags(buffer[22:24])
         # number of bytes the current record occupies
         self.used_size          = int.from_bytes(bytes=buffer[24:28], byteorder='little')
         self.alloc_size         = int.from_bytes(bytes=buffer[28:32], byteorder='little')
@@ -430,12 +430,13 @@ class NTFS(AbstractVolume):
                 byte_per_record=self.nBytesPerFileRecord,
                 byte_per_sector=self.nBytesPerSector
             )
-            # đọc trong MFT (MFT coi như một mảng), record nào hợp lệ ((id >= 24 or id == 5) and parent hợp lệ) thì mới được đưa vào
+            # đọc trong MFT (MFT coi như một mảng), record nào hợp lệ ((id > 24 or id == 5) and parent hợp lệ) thì mới được đưa vào
             # Khi đọc thì sẽ gặp parent trước. Nếu parent không hợp lệ => không được đưa vào list => không xuất hiện trong list <=> get() == None
             # => cái entry hiện tại đang xét cũng không cần quan tâm luôn
             if (
-                entry.id and (entry.id >= 24 or entry.id == 5) and
-                entry.parent_id and (entry.parent_id >= 24 or entry.parent_id == 5) and
+                entry.in_use and
+                entry.id and (entry.id > 24 or entry.id == 5) and
+                entry.parent_id and (entry.parent_id > 24 or entry.parent_id == 5) and
                 ( ################################ mới thêm điều kiện này
                     self.__id_to_entry.get(entry.parent_id) or
                     entry.parent_id == 5
