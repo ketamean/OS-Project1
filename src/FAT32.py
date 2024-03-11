@@ -72,8 +72,7 @@ class FAT32(AbstractVolume):
         sectorChain = self.clusterToSector(clusterChain)
         RDETbuffer = read_sector_chain(self.file_object, sectorChain, self.nBytesPerSector)
 
-        self.root_directory = FATDirectory(RDETbuffer, '', self, isrdet=True)   
-
+        self.root_directory = FATDirectory(RDETbuffer, '', self, isrdet=True)    
     def readRDETCluster(self, startCluster) -> list:
         """
         Hàm dùng để dò bảng FAT ra dãy cluster của RDET, bắt đầu từ startCluster
@@ -136,7 +135,7 @@ class FAT32(AbstractVolume):
         self.volume = FAT32(file_object)
         # self.volume.root_directory.build_tree()
         self.volume.root_directory.build_tree_with_ositem()
-        self.volume.root_directory.print_tree_with_ositem()
+        self.volume.root_directory.print_tree()
         self.current_dir = self.volume.root_directory
 
     def generate_table_view(self):
@@ -260,8 +259,8 @@ class FATDirectory(AbstractDirectory):
             else:
                 self.name = read_bytes_buffer(main_entry_buffer, 0, 11).decode('utf-8', errors='ignore').strip()
             # Các byte thấp và cao của chỉ số cluster đầu
-            highbytes = read_entry_buffer(main_entry_buffer, 0x14, 2)
-            lowbytes = read_entry_buffer(main_entry_buffer, 0x1A, 2)
+            highbytes = read_number_buffer(main_entry_buffer, 0x14, 2)
+            lowbytes = read_number_buffer(main_entry_buffer, 0x1A, 2)
             self.begin_cluster = highbytes * 0x100 + lowbytes
             self.path = parent_path + '/' + self.name
         else:
@@ -269,25 +268,25 @@ class FATDirectory(AbstractDirectory):
             self.begin_cluster = self.volume.rdetStartCluster
             self.path = ''
 
-        self.attr = read_entry_buffer(main_entry_buffer, 0xB, 1)
+        self.attr = read_number_buffer(main_entry_buffer, 0xB, 1)
 
         self.cluster_chain = self.volume.readRDETCluster(self.begin_cluster)
         self.sectors = self.volume.clusterToSector(self.cluster_chain)
         # Kích thước tập tin
-        self.size = read_entry_buffer(main_entry_buffer,0x1C,4)
+        self.size = read_number_buffer(main_entry_buffer,0x1C,4)
 
         # Extracting created day and time
-        created_date = read_entry_buffer(main_entry_buffer, 0x10, 2)
-        created_time = read_entry_buffer(main_entry_buffer, 0x0D, 3)
+        created_date = read_number_buffer(main_entry_buffer, 0x10, 2)
+        created_time = read_number_buffer(main_entry_buffer, 0x0D, 3)
         # create_milisec = read_bytes_buffer(main_entry_buffer, 0x0D, 1) 
         self.created_day, self.created_time = self.decode_datetime(created_date, created_time)
 
         # self.create_milisecond = int.from_bytes(create_milisec, byteorder='little')
         # Extracting latest modified day
-        modified_date = read_entry_buffer(main_entry_buffer, 0x18, 2)
+        modified_date = read_number_buffer(main_entry_buffer, 0x18, 2)
         self.modified_day = self.decode_date(modified_date)
 
-        access_day = read_entry_buffer(main_entry_buffer, 0x12, 2)
+        access_day = read_number_buffer(main_entry_buffer, 0x12, 2)
         self.latest_access_day = self.decode_date(access_day)
 
     def decode_datetime(self, date_bytes, time_bytes):
@@ -311,8 +310,7 @@ class FATDirectory(AbstractDirectory):
         day = date_bytes & 0x1F
 
         return year, month, day
-    
-    
+
     def build_tree_with_ositem(self):
         """
         Build the directory tree using OSItem objects
@@ -360,7 +358,6 @@ class FATDirectory(AbstractDirectory):
                                 subdirectory.begin_cluster, 
                                 subdirectory.size)
                 
-
                 self.subentries.append(ositem)
 
                 # self.subentries.append(ositem)
@@ -478,9 +475,9 @@ class FATFile(AbstractFile):
 
         
         # Phần Word(2 byte) cao
-        highbytes = read_entry_buffer(main_entry_buffer, 0x14, 2)
+        highbytes = read_number_buffer(main_entry_buffer, 0x14, 2)
         # Phần Word (2 byte) thấp
-        lowbytes = read_entry_buffer(main_entry_buffer, 0x1A, 2)
+        lowbytes = read_number_buffer(main_entry_buffer, 0x1A, 2)
 
         # Cluster bắt đầu
         self.begin_cluster = highbytes * 0x100 + lowbytes
@@ -502,10 +499,10 @@ class FATFile(AbstractFile):
 
         # self.create_milisecond = int.from_bytes(create_milisec, byteorder='little')
         # Extracting latest modified day
-        modified_date = read_entry_buffer(main_entry_buffer, 0x18, 2)
+        modified_date = read_number_buffer(main_entry_buffer, 0x18, 2)
         self.modified_day = self.decode_date(modified_date)
 
-        access_day = read_entry_buffer(main_entry_buffer, 0x12, 2)
+        access_day = read_number_buffer(main_entry_buffer, 0x12, 2)
         self.latest_access_day = self.decode_date(access_day)
 
     def decode_datetime(self, date_bytes, time_bytes):
