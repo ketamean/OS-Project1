@@ -21,6 +21,7 @@ class FAT32(AbstractVolume):
     #     return super().__new__()
     def __init__(self, file_object) -> None:
         self.file_object = file_object
+
         # Khởi tạo các properties của class
         self.nFatTable = 0              # [int] số bảng FAT
         self.sizeFatTable = 0           # [int] kích thước mỗi bảng FAT
@@ -136,96 +137,35 @@ class FAT32(AbstractVolume):
         self.volume = FAT32(file_object)
         # self.volume.root_directory.build_tree()
         self.volume.root_directory.build_tree_with_ositem()
-        self.volume.root_directory.print_tree_with_ositem()
+        # self.volume.root_directory.print_tree_with_ositem()
+        self.volume.read_all_data('msg.txt')
+        # self.volume.read_specific_data()
+        
         self.current_dir = self.volume.root_directory
 
-    def generate_table_view(self):
-        entry_info_list = []
-        max_width = {}
-
-        def update_max_width(key, value):
-            if key not in max_width:
-                max_width[key] = len(str(value)) + 4
-            elif max_width[key] < len(str(value)):
-                max_width[key] = len(str(value)) + 4
-
-        for entry in self.current_dir.subentries:
-            entry_info = {
-                'name': entry.name,
-                'status': 'Directory' if isinstance(entry, AbstractDirectory) else 'File',
-                'createdTime_hour': entry.created_time[0] if hasattr(entry, 'created_time') else '-',
-                'createdTime_minute': entry.created_time[1] if hasattr(entry, 'created_time') else '-',
-                'createdTime_second': entry.created_time[2] if hasattr(entry, 'created_time') else '-',
-                'createdTime_millisecond': entry.created_time[3] if hasattr(entry, 'created_time') else '-',
-                'createdDate_day': entry.created_day[2] if hasattr(entry, 'created_day') else '-',
-                'createdDate_month': entry.created_day[1] if hasattr(entry, 'created_day') else '-',
-                'createdDate_year': entry.created_day[0] if hasattr(entry, 'created_day') else '-',
-                'latestAccessDay_day': entry.latest_access_day[2] if hasattr(entry, 'latest_access_day') else '-',
-                'latestAccessDay_month': entry.latest_access_day[1] if hasattr(entry, 'latest_access_day') else '-',
-                'latestAccessDay_year': entry.latest_access_day[0] if hasattr(entry, 'latest_access_day') else '-',
-                'latestModificationDay_day': entry.modified_day[2] if hasattr(entry, 'modified_day') else '-',
-                'latestModificationDay_month': entry.modified_day[1] if hasattr(entry, 'modified_day') else '-',
-                'latestModificationDay_year': entry.modified_day[0] if hasattr(entry, 'modified_day') else '-',
-                'beginCluster': entry.begin_cluster if hasattr(entry, 'begin_cluster') else '-'
-            }
-            if entry_info['name'] in ('.', '..'):
-                continue
-
-            entry_info_list.append(entry_info)
-
-            for key, value in entry_info.items():
-                update_max_width(key, value)
-
-        format_str = '{{name: <{name_width}}} {{status: <{status_width}}} {{createdTime_hour: <{createdTime_hour_width}}} ' \
-                    '{{createdTime_minute: <{createdTime_minute_width}}} {{createdTime_second: <{createdTime_second_width}}} ' \
-                    '{{createdTime_millisecond: <{createdTime_millisecond_width}}} {{createdDate_day: <{createdDate_day_width}}} ' \
-                    '{{createdDate_month: <{createdDate_month_width}}} {{createdDate_year: <{createdDate_year_width}}} ' \
-                    '{{latestAccessDay_day: <{latestAccessDay_day_width}}} {{latestAccessDay_month: <{latestAccessDay_month_width}}} ' \
-                    '{{latestAccessDay_year: <{latestAccessDay_year_width}}} {{latestModificationDay_day: <{latestModificationDay_day_width}}} ' \
-                    '{{latestModificationDay_month: <{latestModificationDay_month_width}}} {{latestModificationDay_year: <{latestModificationDay_year_width}}} ' \
-                    '{{beginCluster: <{beginCluster_width}}}\n'
-
-        print_str = ''
-        print_str += format_str.format(name='Filename', status='Status', createdTime_hour='createdTime_hour',
-                                        createdTime_minute='createdTime_minute', createdTime_second='createdTime_second',
-                                        createdTime_millisecond='createdTime_millisecond',
-                                        createdDate_day='createdDate_day', createdDate_month='createdDate_month',
-                                        createdDate_year='createdDate_year', latestAccessDay_day='latestAccessDay_day',
-                                        latestAccessDay_month='latestAccessDay_month', latestAccessDay_year='latestAccessDay_year',
-                                        latestModificationDay_day='latestModificationDay_day',
-                                        latestModificationDay_month='latestModificationDay_month',
-                                        latestModificationDay_year='latestModificationDay_year',
-                                        beginCluster='Begin Cluster',
-                                        name_width=max_width.get('name', 0), status_width=max_width.get('status', 0),
-                                        createdTime_hour_width=max_width.get('createdTime_hour', 0),
-                                        createdTime_minute_width=max_width.get('createdTime_minute', 0),
-                                        createdTime_second_width=max_width.get('createdTime_second', 0),
-                                        createdTime_millisecond_width=max_width.get('createdTime_millisecond', 0),
-                                        createdDate_day_width=max_width.get('createdDate_day', 0),
-                                        createdDate_month_width=max_width.get('createdDate_month', 0),
-                                        createdDate_year_width=max_width.get('createdDate_year', 0),
-                                        latestAccessDay_day_width=max_width.get('latestAccessDay_day', 0),
-                                        latestAccessDay_month_width=max_width.get('latestAccessDay_month', 0),
-                                        latestAccessDay_year_width=max_width.get('latestAccessDay_year', 0),
-                                        latestModificationDay_day_width=max_width.get('latestModificationDay_day', 0),
-                                        latestModificationDay_month_width=max_width.get('latestModificationDay_month', 0),
-                                        latestModificationDay_year_width=max_width.get('latestModificationDay_year', 0),
-                                        beginCluster_width=max_width.get('beginCluster', 0))
-
-        for entry in entry_info_list:
-            print(entry)
-
-        return ""
-
-
-    def list_entries(self):
+    def read_all_data(self, filename):
         """
-        Handler function for 'ls'
+        Hàm xuất ra mọi dữ liệu trong tập tin txt
         """
-        self.current_dir.build_tree_with_ositem()
+        for entry in self.root_directory.subentries:
+            if isinstance(entry, OSFile):
+                if entry.name.lower() == filename.lower():
+                    file_path = os.path.join("T:\\", filename)
+                    print(file_path)
+                    with open(file_path, 'rb') as file:
+                        binary_data = file.read()
+                        text_data = binary_data.decode('utf-8', errors='ignore')
+                        print(text_data)
 
-        table = self.generate_table_view()
-        print(table)
+    def read_specific_data(self):
+        input_file = input('Enter the file name: ')
+        file_name, file_extension = os.path.splitext(input_file)
+        if file_extension.lower() == '.txt':
+            file_path = os.path.join("T:\\", input_file)
+            with open(file_path, 'rb') as file:
+                binary_data = file.read()
+                text_content = binary_data.decode('utf-8', errors='ignore')
+                print(text_content)
 
 class FATDirectory(AbstractDirectory):
     """

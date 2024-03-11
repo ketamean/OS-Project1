@@ -30,18 +30,18 @@ def read_bytes_buffer(buffer, offset, size=1) -> bytes:
         
     return buffer[offset:offset+size]
     
-# def read_number_buffer(buffer, offset, size) -> int:
-#     """
-#     Hàm đọc số nguyên không dấu từ buffer tại vị trí `offset` với kích thước `size`.
-#     Nếu offset viết theo hex, truyền vào dưới dạng chuỗi (vd: '0B', '0D', ...)
-#     Nếu offset viết ở hệ 10, truyền vào dưới dạng số (vd: 110, 4096, ...)
-#     Hàm này đã xử lý số little endian.
+def read_entry_buffer(buffer, offset, size) -> int:
+    """
+    Hàm đọc số nguyên không dấu từ buffer tại vị trí `offset` với kích thước `size`.
+    Nếu offset viết theo hex, truyền vào dưới dạng chuỗi (vd: '0B', '0D', ...)
+    Nếu offset viết ở hệ 10, truyền vào dưới dạng số (vd: 110, 4096, ...)
+    Hàm này đã xử lý số little endian.
     
-#     Cách dùng tương tự `read_string_buffer`
-#     """
-#     buffer = read_bytes_buffer(buffer, offset, size)
-#     hex_buffer = buffer[::-1].hex()
-#     return HexToDec(hex_buffer)
+    Cách dùng tương tự `read_string_buffer`
+    """
+    buffer = read_bytes_buffer(buffer, offset, size)
+    hex_buffer = buffer[::-1].hex()
+    return HexToDec(hex_buffer)
 
 def read_number_buffer(buffer: bytes, start_index: int, length: int) -> int:
     hex_str = buffer[start_index:start_index + length].hex()
