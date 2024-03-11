@@ -82,7 +82,7 @@ class AbstractEntry(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def attr(self) -> list:
+    def attr(self) -> int:
         """
         Tên của thư mục này
         """
@@ -97,7 +97,7 @@ class AbstractEntry(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def sectors(self) -> list:
+    def sectors(self) -> int:
         """
         Là mảng các chỉ số sector chứa dữ liệu nhị phân của SDET/RDET của thư mục này
         """
@@ -111,14 +111,6 @@ class AbstractDirectory(AbstractEntry):
         Mảng của các subentries (file/subdirectory) của thư mục này.
         """
         pass
-
-    @abstractmethod
-    def build_tree(self):
-        """
-        Hàm để dựng được danh sách các subentry tương ứng với thư mục này (dữ liệu là từ SDET/RDET của thư mục). Danh sách này lưu vào mảng subentries[].
-        """
-        pass
-
 
 class AbstractFile(AbstractEntry):
     @property

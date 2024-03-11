@@ -40,7 +40,12 @@ def read_number_buffer(buffer, offset, size) -> int:
     Cách dùng tương tự `read_string_buffer`
     """
     buffer = read_bytes_buffer(buffer, offset, size)
-    return HexToDec(buffer[::-1].hex())
+    hex_buffer = buffer[::-1].hex()
+    if hex_buffer:
+        return HexToDec(hex_buffer)
+    else:
+        # Handle the case where the buffer is empty
+        return 0  # Or raise an exception or return another appropriate value
 
 def read_sector_chain(file_object, sector_list, bps=512):
     """

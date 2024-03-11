@@ -72,8 +72,7 @@ class FAT32(AbstractVolume):
         sectorChain = self.clusterToSector(clusterChain)
         RDETbuffer = read_sector_chain(self.file_object, sectorChain, self.nBytesPerSector)
 
-        self.root_directory = FATDirectory(RDETbuffer, '', self, isrdet=True)
-    
+        self.root_directory = FATDirectory(RDETbuffer, '', self, isrdet=True)    
     def readRDETCluster(self, startCluster) -> list:
         """
         Hàm dùng để dò bảng FAT ra dãy cluster của RDET, bắt đầu từ startCluster
@@ -134,9 +133,9 @@ class FAT32(AbstractVolume):
         Dựng cây thư mục gốc
         """
         self.volume = FAT32(file_object)
-        print(self.volume.getInfo())
-        print('\n')
-        self.volume.root_directory.build_tree()
+        # self.volume.root_directory.build_tree()
+        self.volume.root_directory.build_tree_with_ositem()
+        self.volume.root_directory.print_tree()
         self.current_dir = self.volume.root_directory
 
     def generate_table_view(self):
@@ -222,7 +221,7 @@ class FAT32(AbstractVolume):
         """
         Handler function for 'ls'
         """
-        self.current_dir.build_tree()
+        self.current_dir.build_tree_with_ositem()
 
         table = self.generate_table_view()
         print(table)
@@ -259,9 +258,6 @@ class FATDirectory(AbstractDirectory):
                 lfn_entries.clear()
             else:
                 self.name = read_bytes_buffer(main_entry_buffer, 0, 11).decode('utf-8', errors='ignore').strip()
-            # Status
-            self.attr = read_number_buffer(main_entry_buffer, 0xB, 1)
-
             # Các byte thấp và cao của chỉ số cluster đầu
             highbytes = read_number_buffer(main_entry_buffer, 0x14, 2)
             lowbytes = read_number_buffer(main_entry_buffer, 0x1A, 2)
@@ -272,8 +268,10 @@ class FATDirectory(AbstractDirectory):
             self.begin_cluster = self.volume.rdetStartCluster
             self.path = ''
 
-        cluster_chain = self.volume.readRDETCluster(self.begin_cluster)
-        self.sectors = self.volume.clusterToSector(cluster_chain)
+        self.attr = read_number_buffer(main_entry_buffer, 0xB, 1)
+
+        self.cluster_chain = self.volume.readRDETCluster(self.begin_cluster)
+        self.sectors = self.volume.clusterToSector(self.cluster_chain)
         # Kích thước tập tin
         self.size = read_number_buffer(main_entry_buffer,0x1C,4)
 
@@ -312,36 +310,99 @@ class FATDirectory(AbstractDirectory):
         day = date_bytes & 0x1F
 
         return year, month, day
-            
-    def build_tree(self):
+
+    def build_tree_with_ositem(self):
         """
-        Dựng cây thư mục cho thư mục này (đọc các sector trong mảng `self.sectors` được SDET rồi xử lý)
+        Build the directory tree using OSItem objects
         """
-        if self.subentries != None: 
-            # Nếu đã dựng rồi thì ko làm lại nữa
-            return 
+        if self.subentries != None:
+            # If the directory tree has already been built, return
+            return
+        
         self.subentries = []
         subentry_index = 0
-
-        # Đọc SDET (dữ liệu nhị phân) của thư mục
-        sdet_buffer = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         lfn_entries_queue = []
 
+        # Read SDET buffer
+        sdet_buffer = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         while True:
             subentry_buffer = read_bytes_buffer(sdet_buffer, subentry_index, 32)
-            # Read type
+            # # Read type
+            # entry_status = read_bytes_buffer(subentry_buffer, 0, 1)
+            # if entry_status == b'\x00':
+            #     # This entry is unused, skip it
+            #     subentry_index += 32
+            #     continue
+            # elif entry_status == b'\xE5':
+            #     # This file has been deleted, skip it
+            #     subentry_index += 32
+            #     continue
             entry_type = read_number_buffer(subentry_buffer, 0xB, 1)
             if entry_type & 0x10 == 0x10:
                 # Là thư mục
-                self.subentries.append(FATDirectory(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
+                subdirectory = FATDirectory(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue)
+                ositem = OSFolder(subdirectory.name, subdirectory.describe_attr(), 
+                                subdirectory.created_time[0], 
+                                subdirectory.created_time[1], 
+                                subdirectory.created_time[2], 
+                                subdirectory.created_time[3], 
+                                subdirectory.created_day[2], 
+                                subdirectory.created_day[1], 
+                                subdirectory.created_day[0], 
+                                subdirectory.latest_access_day[2], 
+                                subdirectory.latest_access_day[1], 
+                                subdirectory.latest_access_day[0], 
+                                subdirectory.modified_day[2], 
+                                subdirectory.modified_day[1], 
+                                subdirectory.modified_day[0], 
+                                subdirectory.begin_cluster, 
+                                subdirectory.size)
+                
+                self.subentries.append(ositem)
+
+                # self.subentries.append(ositem)
+                # sector_subfolder = clusterToSector(subdirectory.begin_cluster)
+                # RDET_subfolder = read_sector_chain(self.subentries, sector_subfolder)
+                # self.folder_directory = FATDirectory(RDET_subfolder, '', self, isrdet=False)    
+                # self.folder_directory.build_tree_with_ositem()
+
             elif entry_type & 0x20 == 0x20:
                 # Là tập tin (archive)
-                self.subentries.append(FATFile(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
+                file = FATFile(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue)
+                ositem = OSFile(file.name, str(file.name_ext), file.describe_attr(),
+                                file.created_time[0], 
+                                file.created_time[1], 
+                                file.created_time[2], 
+                                file.created_time[3], 
+                                file.created_day[2], 
+                                file.created_day[1], 
+                                file.created_day[0], 
+                                file.latest_access_day[2], 
+                                file.latest_access_day[1], 
+                                file.latest_access_day[0], 
+                                file.modified_day[2], 
+                                file.modified_day[1], 
+                                file.modified_day[0], 
+                                file.begin_cluster, 
+                                file.size)
+                self.subentries.append(ositem)
             elif entry_type & 0x0F == 0x0F:
                 lfn_entries_queue.append(subentry_buffer)
             if entry_type == 0:
                 break
             subentry_index += 32
+    
+    def print_tree_with_ositem(self, indent=0):
+        """
+        Recursively print out the directory tree with proper indentation using OSItem objects
+        """
+        print("  " * indent + self.name + "/")
+        if self.subentries:
+            for entry in self.subentries:
+                if isinstance(entry, OSItem):
+                    print("  " * (indent + 1) + str(entry.getInfo()))
+                else:
+                    entry.print_tree_with_ositem(indent + 1)
 
     def print_tree(self, indent=0):
         """
@@ -369,7 +430,8 @@ class FATDirectory(AbstractDirectory):
         desc_map = {
             0x10: 'D',
             0x20: 'A',
-            0x01: 'R', 
+            0x01: 'R',
+            0x08: 'V', 
             0x02: 'H',
             0x04: 'S',
         }
@@ -383,6 +445,7 @@ class FATDirectory(AbstractDirectory):
 
 class FATFile(AbstractFile):
     volume = None 
+    name_ext = None
     name = None 
     attr = None 
     sectors = None
@@ -406,9 +469,9 @@ class FATFile(AbstractFile):
             self.name = FAT32.process_fat_lfnentries(lfn_entries)
             lfn_entries.clear()
         else:
-            name_base = read_bytes_buffer(main_entry_buffer, 0, 8).decode('utf-8', errors='ignore').strip()
-            name_ext = read_bytes_buffer(main_entry_buffer, 8, 3).decode('utf-8', errors='ignore').strip()
-            self.name = name_base + '.' + name_ext
+            self.name_base = read_bytes_buffer(main_entry_buffer, 0, 8).decode('utf-8', errors='ignore').strip()
+            self.name_ext = read_bytes_buffer(main_entry_buffer, 8, 3).decode('utf-8', errors='ignore').strip()
+            self.name = self.name_base + '.' + self.name_ext
 
         
         # Phần Word(2 byte) cao
@@ -477,6 +540,7 @@ class FATFile(AbstractFile):
             0x10: 'D',
             0x20: 'A',
             0x01: 'R', 
+            0x08: 'V', 
             0x02: 'H',
             0x04: 'S',
         }
@@ -495,5 +559,3 @@ if __name__ == '__main__':
     f = os.fdopen(fd, 'rb')
     fat32_volume = FAT32(f)
     fat32_volume.initialize_root_directory(f)
-    fat32_volume.root_directory.build_and_print_tree()
-    fat32_volume.list_entries()
