@@ -23,7 +23,7 @@
       <property name="title">
        <string/>
       </property>
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="lb_introduction">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -32,6 +32,12 @@
          <height>151</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <family>Outfit</family>
+         <pointsize>15</pointsize>
+        </font>
+       </property>
        <property name="styleSheet">
         <string notr="true">color: rgb(255, 255, 255);</string>
        </property>
@@ -39,7 +45,7 @@
         <string>Group Members:</string>
        </property>
       </widget>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="lb_volumeTitle">
        <property name="geometry">
         <rect>
          <x>110</x>
@@ -62,7 +68,7 @@
         <string>Volume</string>
        </property>
       </widget>
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="lb_appFeaturesTitle">
        <property name="geometry">
         <rect>
          <x>370</x>
@@ -91,7 +97,7 @@
         <set>Qt::AlignCenter</set>
        </property>
       </widget>
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="lb_appFeatures">
        <property name="geometry">
         <rect>
          <x>350</x>
@@ -109,13 +115,14 @@
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 64, 61);
 border-radius: 30px;
-color: rgb(255, 255, 255);</string>
+color: rgb(255, 255, 255);
+padding: 15px;</string>
        </property>
        <property name="text">
         <string>This is where text show</string>
        </property>
       </widget>
-      <widget class="QListWidget" name="listWidget">
+      <widget class="QListWidget" name="list_volume">
        <property name="geometry">
         <rect>
          <x>40</x>
@@ -132,7 +139,9 @@ color: rgb(255, 255, 255);</string>
        </property>
        <property name="styleSheet">
         <string notr="true">background-color: rgb(68, 64, 61);
-border-radius: 30px;</string>
+border-radius: 30px;
+padding: 15px;
+color: rgb(255, 255, 255);</string>
        </property>
        <item>
         <property name="text">
