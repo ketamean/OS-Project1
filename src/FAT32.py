@@ -531,8 +531,7 @@ class FATFile(AbstractFile):
         """
         Trả về mảng các byte của tập tin
         """
-        binary_data = read_sector_chain(self.volume.file_object, self.sectors, self.volume.bps)
-        # "trim" bớt cho về đúng kích thước
+        binary_data = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         return binary_data[:self.size]
 
     def describe_attr(self):
