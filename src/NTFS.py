@@ -1,30 +1,6 @@
 from AbstractVolume import AbstractVolume
 from LowLevel import readSector, HexToBin
-from OSItem import OSFile, OSFolder, OSItem
-def printBuffer(buffer):
-    """
-        this function is for testing the process of reading buffers
-
-        the given argument `buffer` is in bytes
-    """
-    buffer = buffer.hex().upper()
-    print('     ', end='')
-    for i in range(0,16):
-        if i == 8:
-            print('- ', end='')
-        print(str(i) if i >= 10 else ' ' + str(i), end=' ')
-    print()
-    for i in range(0,32):
-        print(str(hex(i)) if len(str(hex(i))) == 4 else ' ' + str(hex(i)), end=' ')
-        for j in range(0,32):
-            if j == 16:
-                print('- ', end='')
-            print(buffer[j + 32*i], end='')
-            if j % 2 == 1:
-                print(' ', end='')
-            
-        # if i % 2 == 1:
-        print()
+from OSItem import OSFile, OSFolder
 
 def filetime_to_datetime(filetime):
     """
@@ -454,13 +430,17 @@ class NTFS(AbstractVolume):
                 byte_per_record=self.nBytesPerFileRecord,
                 byte_per_sector=self.nBytesPerSector
             )
-
-            if entry.id and (entry.id >= 24 or entry.id == 5) and entry.parent_id and (entry.parent_id >= 24 or entry.parent_id == 5):
-                """
-                    đây là lớp lọc thứ nhất khi đọc entry và thành lập các ositem
-
-                    trong đây vẫn sẽ còn sót lại một số trường hợp mà các parent folder nằm trong một folder lớn hơn có id != 5 và < 24 (đây là vùng cấm; ordinary folder and file sẽ có id >= 24) dẫn đến việc những item đó không có parent => error => những item này sẽ được loại bỏ ở sau
-                """
+            # đọc trong MFT (MFT coi như một mảng), record nào hợp lệ ((id >= 24 or id == 5) and parent hợp lệ) thì mới được đưa vào
+            # Khi đọc thì sẽ gặp parent trước. Nếu parent không hợp lệ => không được đưa vào list => không xuất hiện trong list <=> get() == None
+            # => cái entry hiện tại đang xét cũng không cần quan tâm luôn
+            if (
+                entry.id and (entry.id >= 24 or entry.id == 5) and
+                entry.parent_id and (entry.parent_id >= 24 or entry.parent_id == 5) and
+                ( ################################ mới thêm điều kiện này
+                    self.__id_to_entry.get(entry.parent_id) or
+                    entry.parent_id == 5
+                )
+            ):
                 self.__id_to_entry[entry.id]    = entry
                 self.__entry_to_id[entry]       = entry.id
                 if entry.is_dir:
@@ -530,12 +510,9 @@ class NTFS(AbstractVolume):
         for id, ositem in self.__id_to_ositem.items():
             if id == 5:
                 continue
-            try:
-                parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
-                # print(ositem.name, 'in', parent_ositem.name)
-                parent_ositem.children.append(ositem)
-            except:
-                pass
+            parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
+            # print(ositem.name, 'in', parent_ositem.name)
+            parent_ositem.children.append(ositem)
         
         self.__root = self.__id_to_ositem[5]
 
