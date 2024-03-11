@@ -29,8 +29,15 @@ def read_bytes_buffer(buffer, offset, size=1) -> bytes:
     """
         
     return buffer[offset:offset+size]
-    
-def read_number_buffer(buffer, offset, size) -> int:
+
+def read_number_buffer(buffer: bytes, start_index: int, length: int) -> int:
+    hex_str = buffer[start_index:start_index + length].hex()
+    if hex_str:
+        return HexToDec(hex_str)
+    else:
+        return 0
+  
+def read_entry_buffer(buffer, offset, size) -> int:
     """
     Hàm đọc số nguyên không dấu từ buffer tại vị trí `offset` với kích thước `size`.
     Nếu offset viết theo hex, truyền vào dưới dạng chuỗi (vd: '0B', '0D', ...)
