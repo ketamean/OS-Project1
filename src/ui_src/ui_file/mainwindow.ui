@@ -143,24 +143,6 @@ border-radius: 30px;
 padding: 15px;
 color: rgb(255, 255, 255);</string>
        </property>
-       <item>
-        <property name="text">
-         <string>Volume 1</string>
-        </property>
-        <property name="textAlignment">
-         <set>AlignCenter</set>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Volume 3</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Volume 2</string>
-        </property>
-       </item>
       </widget>
      </widget>
     </item>

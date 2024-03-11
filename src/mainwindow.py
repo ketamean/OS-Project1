@@ -64,10 +64,6 @@ class Ui_MainWindow(object):
 "color: rgb(255, 255, 255);\n"
 "padding: 15px;")
         self.list_volume = QListWidget(self.groupBox)
-        __qlistwidgetitem = QListWidgetItem(self.list_volume)
-        __qlistwidgetitem.setTextAlignment(Qt.AlignCenter);
-        QListWidgetItem(self.list_volume)
-        QListWidgetItem(self.list_volume)
         self.list_volume.setObjectName(u"list_volume")
         self.list_volume.setGeometry(QRect(40, 100, 256, 361))
         self.list_volume.setFont(font)
@@ -99,16 +95,5 @@ class Ui_MainWindow(object):
         self.lb_volumeTitle.setText(QCoreApplication.translate("MainWindow", u"Volume", None))
         self.lb_appFeaturesTitle.setText(QCoreApplication.translate("MainWindow", u"Application Features", None))
         self.lb_appFeatures.setText(QCoreApplication.translate("MainWindow", u"This is where text show", None))
-
-        __sortingEnabled = self.list_volume.isSortingEnabled()
-        self.list_volume.setSortingEnabled(False)
-        ___qlistwidgetitem = self.list_volume.item(0)
-        ___qlistwidgetitem.setText(QCoreApplication.translate("MainWindow", u"Volume 1", None));
-        ___qlistwidgetitem1 = self.list_volume.item(1)
-        ___qlistwidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Volume 3", None));
-        ___qlistwidgetitem2 = self.list_volume.item(2)
-        ___qlistwidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Volume 2", None));
-        self.list_volume.setSortingEnabled(__sortingEnabled)
-
     # retranslateUi
 

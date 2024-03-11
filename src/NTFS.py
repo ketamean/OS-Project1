@@ -540,6 +540,7 @@ if __name__ == '__main__':
     with open('\\\\.\\D:', 'rb') as f:
         tmp = NTFS(f)
         root = tmp.getDirectoryTree()
-
+        outroot = root
+        
         # test
         root.access(0)
