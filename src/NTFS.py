@@ -521,13 +521,14 @@ class NTFS(AbstractVolume):
         self.__build_ositem_relation()
         self.__build_directory_tree()
 
-    def getInfo(self):
+    def getInfo(self, get_vbr_info_only = True):
         res = super().getInfo()
-        res['startingClusterMFT']       = self.startingClusterMFT
-        res['OEMID']                    = self.OEMID
-        res['nBytesPerFileRecord']      = self.nBytesPerFileRecord
-        res['nClustersPerIndexBuffer']  = self.nClustersPerIndexBuffer
-        res['volumeSerialNum']          = self.volumeSerialNum
+        if not get_vbr_info_only:
+            res['startingClusterMFT']       = self.startingClusterMFT
+            res['OEMID']                    = self.OEMID
+            res['nBytesPerFileRecord']      = self.nBytesPerFileRecord
+            res['nClustersPerIndexBuffer']  = self.nClustersPerIndexBuffer
+            res['volumeSerialNum']          = self.volumeSerialNum
         return res
 
     def getDirectoryTree(self):
