@@ -119,9 +119,11 @@ class OSFile(OSItem):
         self.extension = extension
         super().__init__(name, status, nSectors, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
     
-    def access(self):
-        # # these following commented lines are for testing
-        # print('open file: ', self.name, end='')
+    def access(self, lvl):
+        tab = ''
+        for i in range(lvl):
+            tab += '\t' 
+        print(tab + self.name)
         pass
 
     def getInfo(self):
@@ -141,21 +143,12 @@ class OSFolder(OSItem):
     def addChild(self, ositem: OSItem):
         self.children.append(ositem)
     
-    def access(self):
-        # # these following commented lines are for testing
-        # print('open folder: ', self.name, ', contains: [', end='')
-        # for i in self.children:
-        #     i.access()
-        #     print(',', end='')
-        # print(']',end='')
+    def access(self, lvl):
+        tab = ''
+        for i in range(lvl):
+            tab += '\t' 
+        print(tab + self.name)
+        for child in self.children:
+            child.access(lvl + 1)
         pass
 
-if __name__ == '__main__':
-    # test initializers
-    print('Testing...')
-    file = OSFile('file_nek','.txt','',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-    folder = OSFolder('DIR','',0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-    print("file: ", file.getInfo())
-    folder.addChild(file)
-    folder.access()
-    print('\nTested')
