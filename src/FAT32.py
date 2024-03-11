@@ -327,16 +327,16 @@ class FATDirectory(AbstractDirectory):
         sdet_buffer = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         while True:
             subentry_buffer = read_bytes_buffer(sdet_buffer, subentry_index, 32)
-            # # Read type
-            # entry_status = read_bytes_buffer(subentry_buffer, 0, 1)
-            # if entry_status == b'\x00':
-            #     # This entry is unused, skip it
-            #     subentry_index += 32
-            #     continue
-            # elif entry_status == b'\xE5':
-            #     # This file has been deleted, skip it
-            #     subentry_index += 32
-            #     continue
+            # Read type
+            entry_status = read_bytes_buffer(subentry_buffer, 0, 1)
+            if entry_status == b'\x00':
+                # This entry is unused, skip it
+                subentry_index += 32
+                continue
+            elif entry_status == b'\xE5':
+                # This file has been deleted, skip it
+                subentry_index += 32
+                continue
             entry_type = read_number_buffer(subentry_buffer, 0xB, 1)
             if entry_type & 0x10 == 0x10:
                 # Là thư mục
