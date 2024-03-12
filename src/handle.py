@@ -38,7 +38,7 @@ class PartitionWindow(QtWidgets.QWidget):
     
     my_osItem: OSItem.OSItem = item.data(0,QtCore.Qt.UserRole)
 
-    lb_info:str = f'File:\t\t\t\t{item.text(0)}\nSize:\t\t\t\t{my_osItem.size}\nLast Modified:\t\t\t{my_osItem.latestModificationDay['day']}/{my_osItem.latestModificationDay['month']}/{my_osItem.latestModificationDay['year']}'
+    lb_info:str = f'File:\t\t\t\t{item.text(0)}\nLast Modified:\t\t\t{my_osItem.latestModificationDay['day']}/{my_osItem.latestModificationDay['month']}/{my_osItem.latestModificationDay['year']}' + (f'\nSize:\t\t\t\t{my_osItem.size}' if isinstance(my_osItem, OSItem.OSFile) else '')
     self.ui.lb_info.setText(lb_info)
 
     if (isinstance(my_osItem, OSItem.OSFile)):
