@@ -127,7 +127,7 @@ class MFTEntry:
         # in $STANDARD_INFORMATION
         self.signature              = ''
         self.offset_first_attr      = None
-        self.in_use                = None
+        self.in_use                 = None
         self.is_dir                 = None
         self.used_size              = None
         self.alloc_size             = None
@@ -243,6 +243,10 @@ class MFTEntry:
             self.data_alloc_size    = int.from_bytes(bytes=attr_buffer[0x28:0x28 + 8], byteorder='little')
             self.data_real_size     = int.from_bytes(bytes=attr_buffer[0x30:0x30 + 8], byteorder='little')
             self.data_init_size     = int.from_bytes(bytes=attr_buffer[0x38:0x38 + 8], byteorder='little')
+        else:
+            begin_content   = int.from_bytes(bytes=attr_buffer[20:22], byteorder='little')
+            content_size    = int.from_bytes(bytes=attr_buffer[16:20], byteorder='little')
+            self.data_real_size = begin_content + content_size
         ############################################################
         def isTextFile(filename: str):
             if filename and filename.endswith('.txt'):
@@ -260,6 +264,7 @@ class MFTEntry:
             begin_content   = int.from_bytes(bytes=attr_buffer[20:22], byteorder='little')
             content_size    = int.from_bytes(bytes=attr_buffer[16:20], byteorder='little')
             self.data       = attr_buffer[begin_content:begin_content + content_size].decode('utf-8')
+            self.data_real_size = begin_content + content_size
         else:
             lcn             = 0     # logical cluster number of the volume
             datarun_offset  = int.from_bytes(bytes=attr_buffer[0x20:0x22], byteorder='little')
@@ -462,7 +467,7 @@ class NTFS(AbstractVolume):
                         latestModificationDay_month=entry.latestModificationDay['month'],
                         latestModificationDay_year=entry.latestModificationDay['year'],
                         idxStartingCluster=self.startingClusterMFT + entry.id * ((self.nBytesPerFileRecord // self.nBytesPerSector) // self.nSectorsPerCluster),
-                        size=entry.alloc_size
+                        size=entry.used_size
                     )
                 else:
                     ositem = OSFile(
@@ -483,7 +488,7 @@ class NTFS(AbstractVolume):
                         latestModificationDay_month=entry.latestModificationDay['month'],
                         latestModificationDay_year=entry.latestModificationDay['year'],
                         idxStartingCluster=self.startingClusterMFT + entry.id * ((self.nBytesPerFileRecord // self.nBytesPerSector) // self.nSectorsPerCluster),
-                        size=entry.alloc_size,
+                        size=entry.data_real_size,
                         data=entry.data
                     )
                 self.__id_to_ositem[entry.id]   = ositem
@@ -524,11 +529,11 @@ class NTFS(AbstractVolume):
     def getInfo(self, get_vbr_info_only = True):
         res = super().getInfo()
         if not get_vbr_info_only:
-            res['startingClusterMFT']       = self.startingClusterMFT
-            res['OEMID']                    = self.OEMID
-            res['nBytesPerFileRecord']      = self.nBytesPerFileRecord
-            res['nClustersPerIndexBuffer']  = self.nClustersPerIndexBuffer
-            res['volumeSerialNum']          = self.volumeSerialNum
+            res['Starting cluster of Master File Table']    = self.startingClusterMFT
+            res['OEMID']                                    = self.OEMID
+            res['Number of bytes per file record']          = self.nBytesPerFileRecord + ' byte' + ('s' if self.nBytesPerFileRecord >= 2 else '')
+            res['Number of cluster per index buffer']       = self.nClustersPerIndexBuffer + ' cluster' + ('s' if self.nClustersPerIndexBuffer >= 2 else '')
+            res['Volume serial number']                     = self.volumeSerialNum
         return res
 
     def getDirectoryTree(self):
@@ -538,9 +543,6 @@ class NTFS(AbstractVolume):
         return self.__root
 
 if __name__ == '__main__':
-    with open('\\\\.\\D:', 'rb') as f:
+    with open('\\\\.\\H:', 'rb') as f:
         tmp = NTFS(f)
         root = tmp.getDirectoryTree()
-
-        # test
-        root.access(0)
