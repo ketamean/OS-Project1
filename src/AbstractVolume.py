@@ -1,3 +1,5 @@
+from abc import ABCMeta, abstractmethod
+
 class AbstractVolume:
     """
         đây là abstract class đại diện cho các loại partition: FAT32, NTFS
@@ -41,11 +43,12 @@ class AbstractVolume:
     
     def getInfo(self):
         return {
-            'nBytesPerSector'       : self.nBytesPerSector,
-            'nSectorsPerCluster'    : self.nSectorsPerCluster,
-            'nSectorsOnBootSector'  : self.nSectorsOnBootSector,
-            'nSectorPerTrack'       : self.nSectorPerTrack,
-            'nHead'                 : self.nHead,
-            'sizeVolume'            : self.sizeVolume,
-            'partitionType'         : self.partitionType,
+            'Number of bytes per sector'                : self.nBytesPerSector,
+            'Number of sectors per cluster'             : self.nSectorsPerCluster,
+            'Number of sectors on boot sector region'   : self.nSectorsOnBootSector,
+            'Number of sectors per track'               : self.nSectorPerTrack,
+            'Number of head on disk'                    : self.nHead,
+            'Total size of the volume'                  : self.sizeVolume,
+            'Partition type'                            : self.partitionType,
         }
+    

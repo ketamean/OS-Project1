@@ -17,3 +17,26 @@ def readSector(fileobject, nsector, beginSector = 0, bytePerSector = 512):
     """
     fileobject.seek(beginSector * bytePerSector)
     return fileobject.read(nsector * bytePerSector)
+
+def readBuffer(buffer, offset, size=1) -> bytes:
+    """
+    Hàm đọc chuỗi từ buffer tại vị trí `offset` với kích thước `size`.
+    Nếu offset ở hệ 16 thì viết thêm tiền tố `0x`. Vd: `0x0DC`.
+    HÀM CHƯA XỬ LÝ LITTLE ENDIEN
+    
+    Ví dụ: đọc tên file trên entry chính (8 byte tại offset `00`).
+    >>> read_string(buffer, '00', 8)
+    >>> read_string(buffer, 0, 8)
+    """
+        
+    return buffer[offset:offset+size]
+
+def readSectorBuffer(file_object, sector_list, bps=512):
+    """
+    Hàm đọc một dãy các sector từ mảng.
+    Trả về: buffer đọc được.
+    """
+    buffer = b''
+    for sector in sector_list:
+        buffer += readSector(file_object, 1, sector, bps)
+    return buffer
