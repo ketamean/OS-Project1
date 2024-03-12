@@ -5,7 +5,7 @@ from mainwindow import Ui_MainWindow
 
 import LowLevel
 
-from handle_NTFS import PartitionWindow
+from handle import PartitionWindow
 
 class MainWindow(QtWidgets.QMainWindow):
   def __init__(self):
