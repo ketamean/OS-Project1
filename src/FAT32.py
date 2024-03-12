@@ -27,9 +27,6 @@ class FAT32(AbstractVolume):
 
         # Đọc thông tin từ boot sector để set properties    
         buffer = readSector(file_object, 1)
-        # print('Boot Sector')
-        # print(buffer)
-        # print('\n')
 
         # [int] số byte trên sector, đọc từ offset 11 tới 12
         self.nBytesPerSector = int.from_bytes(buffer[11:13], byteorder='little') 
@@ -60,18 +57,20 @@ class FAT32(AbstractVolume):
         # super().__init__(self.nBytesPerSector, self.nSectorsPerCluster, self.nSectorsOnBootSector, self.nSectorPerTrack, self.nHead, self.sizeVolume, self.partitionType)
 
         # Đọc bảng FAT (sf byte tại offset sb)
-        self.fat_table_buffer = readSector(self.file_object, 10, self.nSectorsOnBootSector + 1)
-        # print('FAT Table')
-        # print(self.fat_table_buffer)
-        # print('\n')
+        self.fat_table_buffer = readSector(
+            fileobject=self.file_object,
+            nsector=self.sizeFatTable * self.nSectorsPerCluster,
+            beginSector=self.nSectorsOnBootSector,
+            bytePerSector=self.nBytesPerSector
+        )
 
         # RDET buffer
-        clusterChain = self.read_rdet_cluster(self.rdetStartCluster)
-        sectorChain = self.cluster_to_sector(clusterChain)
-        RDETbuffer = read_sector_chain(self.file_object, sectorChain, self.nBytesPerSector)
+        clusterChain = self.readRDETCluster(self.rdetStartCluster)
+        sectorChain = self.clusterToSector(clusterChain)
+        RDETbuffer = readSectorBuffer(self.file_object, sectorChain, self.nBytesPerSector)
 
-        self.root_directory = FATDirectory(RDETbuffer, '', self, isrdet=True)
-        self.root_directory.build_tree()
+        self.root_directory = TmpFATDir(RDETbuffer[0:32], '', self, isrdet=True)
+        # self.root_directory.build_tree()
         self.current_dir = self.root_directory
         
     def getInfo(self):
@@ -82,23 +81,23 @@ class FAT32(AbstractVolume):
         res['dataStartSector'] = self.dataStartSector
         return res
     
-    def read_rdet_cluster(self, startCluster) -> list:
+    def readRDETCluster(self, startCluster) -> list:
         """
         Hàm dùng để dò bảng FAT ra dãy cluster của RDET, bắt đầu từ startCluster
         """
         # Kiểm tra cluster kết thúc
-        eoCluster = [0x00000000, 0xFFFFFF0, 0xFFFFFFF, 0XFFFFFF7, 0xFFFFFF8, 0xFFFFFFF0]
-        if startCluster in eoCluster:
-            return []
+        def isValid(cls_num):
+            return (cls_num >= 0x2) and (cls_num <= 0xFFFFFEF)
         
+        if not isValid(startCluster):
+            return []
         nextCluster = startCluster
         chain = [nextCluster]
-
         while True:
-            # Bảng FAT bỏ 2 phần tử đầu, bắt đầu từ 0 -> phần tử 2 = cluster 1
-            nextCluster = read_number_buffer(self.fat_table_buffer, nextCluster * 4, 4)
+            # Bảng FAT bỏ 2 phần tử đầu, bắt đầu từ phần tử 2
+            nextCluster = int.from_bytes(self.fat_table_buffer[nextCluster * 4:nextCluster * 4 + 4], 'little')
             # readSector(FATbuffer, 4, nextCluster * 4)
-            if nextCluster in eoCluster:
+            if not isValid(nextCluster):
                 break
             else:
                 chain.append(nextCluster)
@@ -106,7 +105,7 @@ class FAT32(AbstractVolume):
         return chain
 
 
-    def cluster_to_sector(self, clusterChain) -> list: 
+    def clusterToSector(self, clusterChain) -> list: 
         """
         Hàm chuyển đổi dãy cluster thành dãy sector
         Ta có 1 cluster có Sc sector -> cluster k  bắt đầu từ beginSector + k * Sc
@@ -121,132 +120,31 @@ class FAT32(AbstractVolume):
         return chain
 
     @staticmethod
-    def process_fat_lfnentries(subentries: list):
+    def join_lfnentries(subentries: list):
         """
         Hàm join các entry phụ lại thành tên dài
         """
-        # name = b''
-        # for subentry in subentries:
-        #     name += read_bytes_buffer(subentry, 1, 10)
-        #     name += read_bytes_buffer(subentry, 0xE, 12)
-        #     name += read_bytes_buffer(subentry, 0x1C, 4)
-
-        # cnt = len(name) - 1
-        # for i in range(cnt, -1, -1):
-        #     if name[i] != 0xff:
-        #         break
-        #     cnt -= 1
-        # name = name[0:cnt-2]
-        # name = name.decode('ascii', errors='ignore')
-        # return name
         name = b''
+        # nối các dãy đọc từ list các subentry
         for subentry in subentries:
-            name += read_bytes_buffer(subentry, 1, 10)
-            name += read_bytes_buffer(subentry, 0xE, 12)
-            name += read_bytes_buffer(subentry, 0x1C, 4)
+            name += readBuffer(subentry, 1, 10)
+            name += readBuffer(subentry, 0xE, 12)
+            name += readBuffer(subentry, 0x1C, 4)
         name = name.decode('utf-16le', errors='ignore')
 
         if name.find('\x00') > 0:
             name = name[:name.find('\x00')]
         return name
 
-    def generate_table_view(self):
-        entry_info_list = []
-        max_width = {}
-
-        def update_max_width(key, value):
-            if key not in max_width:
-                max_width[key] = len(str(value)) + 4
-            elif max_width[key] < len(str(value)):
-                max_width[key] = len(str(value)) + 4
-
-        for entry in self.current_dir.subentries:
-            entry_info = {
-                'name': entry.name,
-                'status': 'Directory' if isinstance(entry, AbstractDirectory) else 'File',
-                'createdTime_hour': entry.created_time[0] if hasattr(entry, 'created_time') else '-',
-                'createdTime_minute': entry.created_time[1] if hasattr(entry, 'created_time') else '-',
-                'createdTime_second': entry.created_time[2] if hasattr(entry, 'created_time') else '-',
-                'createdTime_millisecond': entry.created_time[3] if hasattr(entry, 'created_time') else '-',
-                'createdDate_day': entry.created_day[2] if hasattr(entry, 'created_day') else '-',
-                'createdDate_month': entry.created_day[1] if hasattr(entry, 'created_day') else '-',
-                'createdDate_year': entry.created_day[0] if hasattr(entry, 'created_day') else '-',
-                'latestAccessDay_day': entry.latest_access_day[2] if hasattr(entry, 'latest_access_day') else '-',
-                'latestAccessDay_month': entry.latest_access_day[1] if hasattr(entry, 'latest_access_day') else '-',
-                'latestAccessDay_year': entry.latest_access_day[0] if hasattr(entry, 'latest_access_day') else '-',
-                'latestModificationDay_day': entry.modified_day[2] if hasattr(entry, 'modified_day') else '-',
-                'latestModificationDay_month': entry.modified_day[1] if hasattr(entry, 'modified_day') else '-',
-                'latestModificationDay_year': entry.modified_day[0] if hasattr(entry, 'modified_day') else '-',
-                'beginCluster': entry.begin_cluster if hasattr(entry, 'begin_cluster') else '-'
-            }
-            if entry_info['name'] in ('.', '..'):
-                continue
-
-            entry_info_list.append(entry_info)
-
-            for key, value in entry_info.items():
-                update_max_width(key, value)
-
-        format_str = '{{name: <{name_width}}} {{status: <{status_width}}} {{createdTime_hour: <{createdTime_hour_width}}} ' \
-                    '{{createdTime_minute: <{createdTime_minute_width}}} {{createdTime_second: <{createdTime_second_width}}} ' \
-                    '{{createdTime_millisecond: <{createdTime_millisecond_width}}} {{createdDate_day: <{createdDate_day_width}}} ' \
-                    '{{createdDate_month: <{createdDate_month_width}}} {{createdDate_year: <{createdDate_year_width}}} ' \
-                    '{{latestAccessDay_day: <{latestAccessDay_day_width}}} {{latestAccessDay_month: <{latestAccessDay_month_width}}} ' \
-                    '{{latestAccessDay_year: <{latestAccessDay_year_width}}} {{latestModificationDay_day: <{latestModificationDay_day_width}}} ' \
-                    '{{latestModificationDay_month: <{latestModificationDay_month_width}}} {{latestModificationDay_year: <{latestModificationDay_year_width}}} ' \
-                    '{{beginCluster: <{beginCluster_width}}}\n'
-
-        print_str = ''
-        print_str += format_str.format(name='Filename', status='Status', createdTime_hour='createdTime_hour',
-                                        createdTime_minute='createdTime_minute', createdTime_second='createdTime_second',
-                                        createdTime_millisecond='createdTime_millisecond',
-                                        createdDate_day='createdDate_day', createdDate_month='createdDate_month',
-                                        createdDate_year='createdDate_year', latestAccessDay_day='latestAccessDay_day',
-                                        latestAccessDay_month='latestAccessDay_month', latestAccessDay_year='latestAccessDay_year',
-                                        latestModificationDay_day='latestModificationDay_day',
-                                        latestModificationDay_month='latestModificationDay_month',
-                                        latestModificationDay_year='latestModificationDay_year',
-                                        beginCluster='Begin Cluster',
-                                        name_width=max_width.get('name', 0), status_width=max_width.get('status', 0),
-                                        createdTime_hour_width=max_width.get('createdTime_hour', 0),
-                                        createdTime_minute_width=max_width.get('createdTime_minute', 0),
-                                        createdTime_second_width=max_width.get('createdTime_second', 0),
-                                        createdTime_millisecond_width=max_width.get('createdTime_millisecond', 0),
-                                        createdDate_day_width=max_width.get('createdDate_day', 0),
-                                        createdDate_month_width=max_width.get('createdDate_month', 0),
-                                        createdDate_year_width=max_width.get('createdDate_year', 0),
-                                        latestAccessDay_day_width=max_width.get('latestAccessDay_day', 0),
-                                        latestAccessDay_month_width=max_width.get('latestAccessDay_month', 0),
-                                        latestAccessDay_year_width=max_width.get('latestAccessDay_year', 0),
-                                        latestModificationDay_day_width=max_width.get('latestModificationDay_day', 0),
-                                        latestModificationDay_month_width=max_width.get('latestModificationDay_month', 0),
-                                        latestModificationDay_year_width=max_width.get('latestModificationDay_year', 0),
-                                        beginCluster_width=max_width.get('beginCluster', 0))
-
-        for entry in entry_info_list:
-            print(entry)
-
-        return ""
-
-
-    def list_entries(self):
-        """
-        Handler function for 'ls'
-        """
-        self.current_dir.build_tree()
-
-        table = self.generate_table_view()
-        print(table)
-
-class FATDirectory(AbstractDirectory):
+class TmpFATDir():
     """
     Lớp đối tượng thể hiện một thư mục trong FAT
     """
     # Override các abstract attribute 
-    volume = None 
-    subentries = None 
-    name = None 
-    attr = None 
+    volume = None
+    subentries = None
+    name = None
+    attr = None
     sectors = None
     path = None
     size = None
@@ -277,84 +175,78 @@ class FATDirectory(AbstractDirectory):
             for child in self.subentries:
                 res.children.append(child.get_ositem())
         return res
-    def __str__(self) -> str:
-        res = {
-            'volume': self.volume,
-            'subentries': self.subentries,
-            'name': self.name,
-            'attr': self.attr,
-            'sectors': self.sectors,
-            'path': self.path,
-            'size': self.size,
-            'created_day': self.created_day,
-            'created_time': self.created_time,
-            'modified_day': self.modified_day,
-        }
-        return str(res)
+  
     def __init__(self, main_entry_buffer: bytes, parent_path: str, volume: FAT32, isrdet=False, lfn_entries=[]):
         # Dãy byte entry chính
         self.entry_buffer = main_entry_buffer
         self.volume = volume # con trỏ đến volume đang chứa thư mục này
         # Danh sách các subentry
         self.subentries = None
+
         # Tên entry
-        
         if len(lfn_entries) > 0:
             lfn_entries.reverse()
-            self.name = FAT32.process_fat_lfnentries(lfn_entries).upper()
+            self.name = FAT32.join_lfnentries(lfn_entries).upper()
             lfn_entries.clear()
         else:
-            self.name = read_bytes_buffer(main_entry_buffer, 0, 11).decode('utf-8', errors='ignore').strip().upper()
+            self.name = readBuffer(main_entry_buffer, 0, 11).decode('utf-8', errors='ignore').strip().upper()
         # Nếu thư mục này là RDET (file thì ko cần xét RDET)
         if not isrdet:
             # Status
-            self.attr = read_number_buffer(main_entry_buffer, 0xB, 1)
+            self.attr = main_entry_buffer[0xB]
 
             # Các byte thấp và cao của chỉ số cluster đầu
-            highbytes = read_number_buffer(main_entry_buffer, 0x14, 2)
-            lowbytes = read_number_buffer(main_entry_buffer, 0x1A, 2)
+            highbytes = int.from_bytes(bytes=main_entry_buffer[0x14:0x14 + 2], byteorder='little')
+            lowbytes = int.from_bytes(bytes=main_entry_buffer[0x1A:0x1A + 2], byteorder='little')
             self.begin_cluster = highbytes * 0x100 + lowbytes
             self.path = parent_path + '/' + self.name
         else:
             self.begin_cluster = self.volume.rdetStartCluster
             self.path = ''
 
-        cluster_chain = self.volume.read_rdet_cluster(self.begin_cluster)
-        self.sectors = self.volume.cluster_to_sector(cluster_chain)
-        # Kích thước tập tin
-        self.size = read_number_buffer(main_entry_buffer,0x1C,4)
+        cluster_chain = self.volume.readRDETCluster(self.begin_cluster)
+        self.sectors = self.volume.clusterToSector(cluster_chain)
 
+        # Kích thước tập tin
+        self.size = int.from_bytes(main_entry_buffer[0x1C:0x1C + 4], 'little')
         # Extracting created day and time
-        created_date = read_number_buffer(main_entry_buffer, 0x10, 2)
-        created_time = read_number_buffer(main_entry_buffer, 0x0D, 3)
-        # create_milisec = read_bytes_buffer(main_entry_buffer, 0x0D, 1) 
+        created_date = int.from_bytes(main_entry_buffer[0x10:0x10 + 2], 'little')
+        created_time = int.from_bytes(main_entry_buffer[0x0D:0x0D + 3], 'little')
         self.created_day, self.created_time = self.decode_datetime(created_date, created_time)
 
-        # self.create_milisecond = int.from_bytes(create_milisec, byteorder='little')
         # Extracting latest modified day
-        modified_date = read_number_buffer(main_entry_buffer, 0x18, 2)
+        modified_date = int.from_bytes(main_entry_buffer[0x18:0x18 + 2], 'little')
         self.modified_day = self.decode_date(modified_date)
 
-        access_day = read_number_buffer(main_entry_buffer, 0x12, 2)
+        access_day = int.from_bytes(main_entry_buffer[0x12:0x12 + 2], 'little')
         self.latest_access_day = self.decode_date(access_day)
 
-        self.build_tree()
-    def decode_datetime(self, date_bytes, time_bytes):
-        year = ((date_bytes >> 9) & 0x7F) + 1980
-        month = (date_bytes >> 5) & 0x0C
-        day = date_bytes & 0x1F
+        self.build_tree(issdet=not isrdet)
 
-        # hour = (time_bytes >> 11) & 0x1F
-        # minute = (time_bytes >> 5) & 0x3F
-        # second = ((time_bytes & 0x1F) * 2)
-        hour = (time_bytes >> 19) & 0x1F
-        minute = (time_bytes >> 13) & 0x3F
-        second = ((time_bytes >> 7) & 0x3F)
-        millisecond = (time_bytes) & 0xC7
+    def decode_datetime(self, date_bytes, time_bytes):
+        # convert date
+        """
+        Hàm decode từ hex ra ngày, tháng, năm và giờ, phút, giây, mili giây
+        Nhận vào dãy hex và trả về Dec
+        """
+
+        year = ((date_bytes >> 9) & 0x7F) + 1980  # Bits 9–15: Count of years from 1980, valid value range 0–127 inclusive (1980–2107)
+        month = (date_bytes >> 5) & 0x0C # Bits 5–8: Month of year, 1 = January, valid value range 1–12 inclusive. 
+        day = date_bytes & 0x1F # Bits 0–4: Day of month, valid value range 1-31 inclusive. 
+
+        # convert time
+        hour = (time_bytes >> 19) & 0x1F # Bits 19-24: hour, valid value range 0-23 inclusive
+        minute = (time_bytes >> 13) & 0x3F # Bits 13-18: minute, valid value range 0-59 inclusive
+        second = ((time_bytes >> 7) & 0x3F) # Bits 7–12: 2-second count, valid value range 0–29 inclusive (0 – 58 seconds).
+        millisecond = (time_bytes) & 0xC7 # Bits 0-6: milisec, valid range 0-99 inclusive.
 
         return (year, month, day), (hour, minute, second, millisecond)
 
     def decode_date(self, date_bytes):
+        """
+        Hàm decode từ hex ra ngày, tháng, năm
+        Làm việc tương tự hàm 'decode_datetime'
+        """
         year = ((date_bytes >> 9) & 0x7F) + 1980
         month = (date_bytes >> 5) & 0x0F
         day = date_bytes & 0x1F
@@ -372,48 +264,47 @@ class FATDirectory(AbstractDirectory):
         subentry_index = 0
 
         # Đọc SDET (dữ liệu nhị phân) của thư mục
-        sdet_buffer = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
+        sdet_buffer = readSectorBuffer(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         lfn_entries_queue = []
         if issdet:
             sdet_buffer = sdet_buffer[64:]
         while True:
-            subentry_buffer = read_bytes_buffer(sdet_buffer, subentry_index, 32)
+            subentry_buffer = readBuffer(sdet_buffer, subentry_index, 32)
             subentry_index += 32
-
+            # Kiểm tra offset đầu của entry
             # check NOT IN USE
-            if read_number_buffer(subentry_buffer, 0, 1) == 0xE5:
+            if subentry_buffer[0] == 0xE5:
                 continue
-
             # Read type
-            entry_type = read_number_buffer(subentry_buffer, 0xB, 1)
-            
-            if entry_type & 0x10 == 0x10:
-                # Là thư mục
-                self.subentries.append(FATDirectory(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
-            elif entry_type & 0x20 == 0x20:
-                # Là tập tin (archive)
-                self.subentries.append(FATFile(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
-            elif entry_type & 0x0F == 0x0F:
-                lfn_entries_queue.append(subentry_buffer)
+            entry_type = subentry_buffer[0xB]
             if entry_type == 0:
                 break
-            
+            elif entry_type & 0x0F == 0x0F:
+                lfn_entries_queue.append(subentry_buffer)
+            elif entry_type & 0x20 == 0x20:
+                # Là tập tin (archive)
+                self.subentries.append(TmpFATFile(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
+                lfn_entries_queue = []
+            elif entry_type & 0x10 == 0x10:
+                # Là thư mục
+                self.subentries.append(TmpFATDir(subentry_buffer, self.path, self.volume, lfn_entries=lfn_entries_queue))
+                lfn_entries_queue = []
 
     def print_tree(self, indent=0):
         """
-        Recursively print out the directory tree with proper indentation
+        In cây
         """
         print("  " * indent + self.name + "/")
         if self.subentries:
             for entry in self.subentries:
-                if isinstance(entry, FATDirectory):
+                if isinstance(entry, TmpFATDir):
                     entry.print_tree(indent + 1)
                 else:
                     print("  " * (indent + 1) + entry.name)
 
     def build_and_print_tree(self):
         """
-        Build and print the directory tree
+        Hàm gọi xây cây và in cây
         """
         self.build_tree()
         self.print_tree()
@@ -423,11 +314,12 @@ class FATDirectory(AbstractDirectory):
         Lấy chuỗi mô tả các thuộc tính
         """
         desc_map = {
-            0x10: 'D',
-            0x20: 'A',
-            0x01: 'R', 
-            0x02: 'H',
-            0x04: 'S',
+            0x10: 'D', # Directory
+            0x20: 'A', # Archive
+            0x01: 'R', # Read Only
+            0x02: 'H', # Hidden
+            0x04: 'S', # System
+            0x08: 'V', # VolLable
         }
         if not self.attr:
             return ''
@@ -438,7 +330,7 @@ class FATDirectory(AbstractDirectory):
         
         return desc_str
 
-class FATFile(AbstractFile):
+class TmpFATFile():
     volume = None 
     name = None 
     attr = None 
@@ -448,10 +340,7 @@ class FATFile(AbstractFile):
     created_day = None
     created_time = None
     modified_day = None
-    # def access(self):
-    #     return OSFile(
-    #         name=self.
-    #     )
+
     def get_ositem(self):
         return OSFile (
             name=self.name_base,
@@ -481,28 +370,27 @@ class FATFile(AbstractFile):
         self.volume = volume
 
         # Thuộc tính trạng thái
-        self.attr = read_number_buffer(main_entry_buffer, 0xB, 1)
-        
+        self.attr = main_entry_buffer[0xB]
+
         # Tên entry 
         if len(lfn_entries) > 0:
             lfn_entries.reverse()
-            self.name = FAT32.process_fat_lfnentries(lfn_entries)
+            self.name = FAT32.join_lfnentries(lfn_entries)
             lfn_entries.clear()
             if self.name.rfind('.') >= 0:
-                self.name_base = self.name[:self.name.rfind('.') - 1].upper()
-                self.name_ext = self.name[self.name.rfind('.') + 1:].upper()
+                self.name_base = self.name[:self.name.rfind('.')].upper()
+                self.name_ext = self.name[self.name.rfind('.')+1:].upper()
             else:
                 self.name_base = self.name
                 self.name_ext = ''
         else:
-            self.name_base = read_bytes_buffer(main_entry_buffer, 0, 8).decode('utf-8', errors='ignore').strip().upper()
-            self.name_ext = read_bytes_buffer(main_entry_buffer, 8, 3).decode('ascii', errors='ignore').strip().upper()
+            self.name_base = readBuffer(main_entry_buffer, 0, 8).decode('utf-8', errors='ignore').strip().upper()
+            self.name_ext = readBuffer(main_entry_buffer, 8, 3).decode('ascii', errors='ignore').strip().upper()
             self.name = self.name_base + '.' + self.name_ext
 
-        # Phần Word(2 byte) cao
-        highbytes = read_number_buffer(main_entry_buffer, 0x14, 2)
-        # Phần Word (2 byte) thấp
-        lowbytes = read_number_buffer(main_entry_buffer, 0x1A, 2)
+        # Phần Word(2 byte) cao và thấp
+        highbytes = int.from_bytes(bytes=main_entry_buffer[0x14:0x14 + 2], byteorder='little')
+        lowbytes = int.from_bytes(bytes=main_entry_buffer[0x1A:0x1A + 2], byteorder='little')
 
         # Cluster bắt đầu
         self.begin_cluster = highbytes * 0x100 + lowbytes
@@ -510,30 +398,23 @@ class FATFile(AbstractFile):
         # Đường dẫn tập tin
         self.path = parent_path + '/' + self.name
 
-        cluster_chain = self.volume.read_rdet_cluster(self.begin_cluster)
+        cluster_chain = self.volume.readRDETCluster(self.begin_cluster)
 
-        print('FATFile __init__', self.name, end=': ')
-        for i in cluster_chain:
-            print(hex(i), end=' ')
-        print()
-
-        self.sectors = self.volume.cluster_to_sector(cluster_chain)
+        self.sectors = self.volume.clusterToSector(cluster_chain)
 
         # Kích thước tập tin
-        self.size = read_number_buffer(main_entry_buffer,0x1C,4)
+        self.size = int.from_bytes(main_entry_buffer[0x1C:0x1C + 4], 'little')
 
         # Extracting created day and time
-        created_date = read_number_buffer(main_entry_buffer, 0x10, 2)
-        created_time = read_number_buffer(main_entry_buffer, 0x0D, 3)
-        # create_milisec = read_bytes_buffer(main_entry_buffer, 0x0D, 1)
+        created_date = int.from_bytes(main_entry_buffer[0x10:0x10 + 2], 'little')
+        created_time = int.from_bytes(main_entry_buffer[0x0D:0x0D + 3], 'little')
         self.created_day, self.created_time = self.decode_datetime(created_date, created_time)
 
-        # self.create_milisecond = int.from_bytes(create_milisec, byteorder='little')
         # Extracting latest modified day
-        modified_date = read_number_buffer(main_entry_buffer, 0x18, 2)
+        modified_date = int.from_bytes(main_entry_buffer[0x18:0x18 + 2], 'little')
         self.modified_day = self.decode_date(modified_date)
 
-        access_day = read_number_buffer(main_entry_buffer, 0x12, 2)
+        access_day = int.from_bytes(main_entry_buffer[0x12:0x12 + 2], 'little')
         self.latest_access_day = self.decode_date(access_day)
         self.data = None
         if self.name_ext == 'TXT':
@@ -544,9 +425,6 @@ class FATFile(AbstractFile):
         month = (date_bytes >> 5) & 0x0C
         day = date_bytes & 0x1F
 
-        # hour = (time_bytes >> 11) & 0x1F
-        # minute = (time_bytes >> 5) & 0x3F
-        # second = ((time_bytes & 0x1F) * 2)
         hour = (time_bytes >> 19) & 0x1F
         minute = (time_bytes >> 13) & 0x3F
         second = ((time_bytes >> 7) & 0x3F)
@@ -565,17 +443,18 @@ class FATFile(AbstractFile):
         """
         Trả về mảng các byte của tập tin
         """
-        binary_data = read_sector_chain(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
+        binary_data = readSectorBuffer(self.volume.file_object, self.sectors, self.volume.nBytesPerSector)
         # "trim" bớt cho về đúng kích thước
         return binary_data[:self.size]
 
     def describe_attr(self):
         desc_map = {
-            0x10: 'D',
-            0x20: 'A',
-            0x01: 'R', 
-            0x02: 'H',
-            0x04: 'S',
+            0x10: 'D', # Directory
+            0x20: 'A', # Archive
+            0x01: 'R', # Read Only
+            0x02: 'H', # Hidden
+            0x04: 'S', # System
+            0x08: 'V', # VolLable
         }
 
         desc_str = ''
@@ -591,9 +470,6 @@ if __name__ == '__main__':
     fd = os.open(volume_path, os.O_RDONLY | os.O_BINARY)
     f = os.fdopen(fd, 'rb')
     fat32_volume = FAT32(f)
-
-    fat32_volume.root_directory.build_tree()
+    print(fat32_volume.getInfo())
     root = fat32_volume.root_directory.get_ositem()
     root.access(0)
-    # fat32_volume.root_directory.print_tree()
-    # fat32_volume.list_entries()

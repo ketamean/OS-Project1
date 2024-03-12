@@ -18,10 +18,11 @@ def readSector(fileobject, nsector, beginSector = 0, bytePerSector = 512):
     fileobject.seek(beginSector * bytePerSector)
     return fileobject.read(nsector * bytePerSector)
 
-def read_bytes_buffer(buffer, offset, size=1) -> bytes:
+def readBuffer(buffer, offset, size=1) -> bytes:
     """
     Hàm đọc chuỗi từ buffer tại vị trí `offset` với kích thước `size`.
     Nếu offset ở hệ 16 thì viết thêm tiền tố `0x`. Vd: `0x0DC`.
+    HÀM CHƯA XỬ LÝ LITTLE ENDIEN
     
     Ví dụ: đọc tên file trên entry chính (8 byte tại offset `00`).
     >>> read_string(buffer, '00', 8)
@@ -29,25 +30,8 @@ def read_bytes_buffer(buffer, offset, size=1) -> bytes:
     """
         
     return buffer[offset:offset+size]
-    
-def read_entry_buffer(buffer, offset, size) -> int:
-    """
-    Hàm đọc số nguyên không dấu từ buffer tại vị trí `offset` với kích thước `size`.
-    Hàm xử lý cả số nguyên hệ hex (8C, E5,..) và số hệ 10 (100,...)
-    Đã xử lý little endien.
-    """
-    buffer = read_bytes_buffer(buffer, offset, size)
-    hex_buffer = buffer[::-1].hex()
-    return HexToDec(hex_buffer)
 
-def read_number_buffer(buffer: bytes, start_index: int, length: int) -> int:
-    hex_str = buffer[start_index:start_index + length].hex()
-    if hex_str:
-        return HexToDec(hex_str)
-    else:
-        return 0
-
-def read_sector_chain(file_object, sector_list, bps=512):
+def readSectorBuffer(file_object, sector_list, bps=512):
     """
     Hàm đọc một dãy các sector từ mảng.
     Trả về: buffer đọc được.
