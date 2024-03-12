@@ -107,6 +107,9 @@
        <string notr="true">background-color: rgb(68, 64, 61);
 border-radius: 30px;</string>
       </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOn</enum>
+      </property>
       <column>
        <property name="text">
         <string>Folders and Files</string>
@@ -119,21 +122,6 @@ border-radius: 30px;</string>
         </color>
        </property>
       </column>
-      <item>
-       <property name="text">
-        <string>Folder A</string>
-       </property>
-       <item>
-        <property name="text">
-         <string>New Subitem</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>New Item</string>
-        </property>
-       </item>
-      </item>
      </widget>
      <widget class="QLabel" name="lb_partionInfo">
       <property name="geometry">
@@ -185,6 +173,36 @@ padding: 15px;</string>
        <string>TextLabel</string>
       </property>
      </widget>
+     <widget class="QScrollArea" name="scrollArea">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>110</y>
+        <width>491</width>
+        <height>341</height>
+       </rect>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>489</width>
+         <height>339</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+     <zorder>label</zorder>
+     <zorder>label_2</zorder>
+     <zorder>label_3</zorder>
+     <zorder>tw_directory</zorder>
+     <zorder>lb_info</zorder>
+     <zorder>scrollArea</zorder>
+     <zorder>lb_partionInfo</zorder>
     </widget>
    </item>
   </layout>
