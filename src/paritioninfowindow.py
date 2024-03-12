@@ -16,8 +16,8 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QGridLayout, QGroupBox, QHeaderView,
-    QLabel, QProgressBar, QSizePolicy, QTreeWidget,
-    QTreeWidgetItem, QWidget)
+    QLabel, QSizePolicy, QTreeWidget, QTreeWidgetItem,
+    QWidget)
 
 class Ui_Partion_Window(object):
     def setupUi(self, Partion_Window):
@@ -65,18 +65,14 @@ class Ui_Partion_Window(object):
         self.lb_partionInfo = QLabel(self.groupBox)
         self.lb_partionInfo.setObjectName(u"lb_partionInfo")
         self.lb_partionInfo.setGeometry(QRect(350, 100, 511, 361))
-        self.lb_partionInfo.setFont(font1)
+        font2 = QFont()
+        font2.setFamilies([u"Outfit"])
+        font2.setPointSize(13)
+        self.lb_partionInfo.setFont(font2)
         self.lb_partionInfo.setStyleSheet(u"background-color: rgb(68, 64, 61);\n"
 "border-radius: 30px;\n"
 "color: rgb(255, 255, 255);\n"
 "padding: 15px;")
-        self.pb_diskUsage = QProgressBar(self.groupBox)
-        self.pb_diskUsage.setObjectName(u"pb_diskUsage")
-        self.pb_diskUsage.setGeometry(QRect(380, 400, 451, 21))
-        self.pb_diskUsage.setAutoFillBackground(False)
-        self.pb_diskUsage.setStyleSheet(u"border-radius: 4px")
-        self.pb_diskUsage.setValue(24)
-        self.pb_diskUsage.setTextVisible(False)
         self.lb_info = QLabel(self.groupBox)
         self.lb_info.setObjectName(u"lb_info")
         self.lb_info.setGeometry(QRect(350, 560, 511, 131))
