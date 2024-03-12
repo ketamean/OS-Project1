@@ -17,6 +17,8 @@ class FAT32(AbstractVolume):
     volume_label = None 
     file_object = None
 
+    __root_osfolder = None
+
     def __init__(self, file_object) -> None:
         self.file_object = file_object
         # Khởi tạo các properties của class
@@ -70,22 +72,26 @@ class FAT32(AbstractVolume):
         RDETbuffer = readSectorBuffer(self.file_object, sectorChain, self.nBytesPerSector)
 
         self.root_directory = TmpFATDir(RDETbuffer[0:32], '', self, isrdet=True)
-        # self.root_directory.build_tree()
-        self.current_dir = self.root_directory
+
+        self.__root_osfolder = self.root_directory.get_ositem()
         
-    def getInfo(self):
+    def getInfo(self, get_vbr_info_only = True):
         res = super().getInfo()
-        res['nFatTable'] = self.nFatTable
-        res['sizeFatTable'] = self.sizeFatTable
-        res['rdetStartCluster'] = self.rdetStartCluster
-        res['dataStartSector'] = self.dataStartSector
+        if not get_vbr_info_only:
+            res['Number of FAT'] = self.nFatTable
+            res['Size of each FAT'] = self.sizeFatTable
+            res['Starting cluster of RDET'] = self.rdetStartCluster
+            res['Starting cluster of data region'] = self.dataStartSector
         return res
+    
+    def getDirectoryTree(self):
+        return self.__root_osfolder
     
     def readRDETCluster(self, startCluster) -> list:
         """
         Hàm dùng để dò bảng FAT ra dãy cluster của RDET, bắt đầu từ startCluster
         """
-        # Kiểm tra cluster kết thúc
+        # Kiểm tra cluster hợp lệ
         def isValid(cls_num):
             return (cls_num >= 0x2) and (cls_num <= 0xFFFFFEF)
         
@@ -470,6 +476,5 @@ if __name__ == '__main__':
     fd = os.open(volume_path, os.O_RDONLY | os.O_BINARY)
     f = os.fdopen(fd, 'rb')
     fat32_volume = FAT32(f)
-    print(fat32_volume.getInfo())
-    root = fat32_volume.root_directory.get_ositem()
+    root = fat32_volume.getDirectoryTree()
     root.access(0)
