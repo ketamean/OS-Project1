@@ -122,7 +122,7 @@ class OSFile(OSItem):
         tab = ''
         for i in range(lvl):
             tab += '\t'
-        print(tab + self.name + '.' + self.extension, '>', len(self.data) if self.data else '')
+        print(tab + self.name + '.' + self.extension)
         pass
 
     def getInfo(self):
