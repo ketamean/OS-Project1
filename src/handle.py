@@ -1,6 +1,8 @@
 from paritioninfowindow import Ui_Partion_Window
 from PySide6 import QtCore, QtWidgets
 from NTFS import NTFS
+from FAT32 import FAT32
+
 import OSItem
 class PartitionWindow(QtWidgets.QWidget):
   volume_letter = ""
@@ -22,11 +24,16 @@ class PartitionWindow(QtWidgets.QWidget):
       else:
         self.ui.lb_partionInfo.setText('This is not a text file')
 
-  def backend_init(self, drive_letter):
+  def backend_init(self, drive_letter, disk_type):
     self.volume_letter = drive_letter
     with open ('\\\\.\\' + drive_letter, 'rb') as f:
-      self.volume_instance = NTFS(f)
-      self.root = self.volume_instance.getDirectoryTree()
+      if (disk_type == "NTFS"):
+        self.volume_instance = NTFS(f)
+        self.root = self.volume_instance.getDirectoryTree()
+      else:
+        self.volume_instance = FAT32(f)
+        self.volume_instance.root_directory.get_ositem()
+      
     dictionary1 = self.volume_instance.getInfo(get_vbr_info_only=False)
     dictionary2 = self.root.getInfo()
     partion_info_text:str = f'Name: {dictionary2['name']}\n'

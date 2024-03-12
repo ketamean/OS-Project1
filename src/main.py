@@ -22,10 +22,9 @@ class MainWindow(QtWidgets.QMainWindow):
   @QtCore.Slot()
   def handle_item_clicked(self, item):
     partition_type = get_partition_type(item.text())
-    if partition_type == "NTFS":
-      self.info = PartitionWindow()
-      self.info.backend_init(item.text())
-      self.info.show()
+    self.info = PartitionWindow()
+    self.info.backend_init(item.text(), partition_type)
+    self.info.show()
 
 def get_partition_type(drive_letter):
   with open ('\\\\.\\' + drive_letter, 'rb') as f:
