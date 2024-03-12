@@ -12,6 +12,7 @@ class MainWindow(QtWidgets.QMainWindow):
     super().__init__()
     self.ui = Ui_MainWindow()
     self.ui.setupUi(self)
+    self.ui.lb_appFeatures.setText("Sau đây là bảng tính năng của hệ thống:\n1. Chọn thiết bị truy suất\n2. Truy xuất toàn bộ cây thư mục thiết bị\n3. Đọc thông tin ổ truy suất\n4. Thông tin tập tin\n5. Đọc file .txt")
     self.ui.list_volume.itemClicked.connect(self.handle_item_clicked)
 
   def add_drive(self, text):
@@ -23,10 +24,11 @@ class MainWindow(QtWidgets.QMainWindow):
   def handle_item_clicked(self, item):
     partition_type = get_partition_type(item.text())
     self.info = PartitionWindow()
-    self.info.backend_init(item.text(), partition_type)
+    self.info.backend_init(item.text()[-3:-1], partition_type)
     self.info.show()
 
-def get_partition_type(drive_letter):
+def get_partition_type(drive_name):
+  drive_letter = drive_name[-3:-1]
   with open ('\\\\.\\' + drive_letter, 'rb') as f:
     sector = LowLevel.readSector(fileobject=f, nsector=1)
     fat32_type = sector[0x52:0x52 + 8]
@@ -46,7 +48,7 @@ if __name__ == "__main__":
   drives = wmi.WMI().Win32_LogicalDisk()
   
   for drive in drives:
-    window.add_drive(drive.Name)
+    window.add_drive(f'{drive.VolumeName if drive.VolumeName != "" else "Logical Disk"} ({drive.Name})')
 
   window.show()
   sys.exit(app.exec())

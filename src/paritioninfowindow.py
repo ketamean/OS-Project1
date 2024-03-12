@@ -36,30 +36,31 @@ class Ui_Partion_Window(object):
         font.setFamilies([u"Outfit"])
         font.setPointSize(24)
         self.label.setFont(font)
-        self.label.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label.setStyleSheet(u"color: rgb(239, 109, 23);")
         self.label_2 = QLabel(self.groupBox)
         self.label_2.setObjectName(u"label_2")
         self.label_2.setGeometry(QRect(370, 40, 301, 41))
         self.label_2.setFont(font)
-        self.label_2.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_2.setStyleSheet(u"color: rgb(239, 109, 23);")
         self.label_3 = QLabel(self.groupBox)
         self.label_3.setObjectName(u"label_3")
         self.label_3.setGeometry(QRect(370, 500, 181, 41))
         self.label_3.setFont(font)
-        self.label_3.setStyleSheet(u"color: rgb(255, 255, 255);")
+        self.label_3.setStyleSheet(u"\n"
+"color: rgb(239, 109, 23);")
         self.tw_directory = QTreeWidget(self.groupBox)
         __qtreewidgetitem = QTreeWidgetItem()
         __qtreewidgetitem.setBackground(0, QColor(255, 255, 255));
         self.tw_directory.setHeaderItem(__qtreewidgetitem)
         self.tw_directory.setObjectName(u"tw_directory")
-        self.tw_directory.setGeometry(QRect(40, 100, 256, 361))
+        self.tw_directory.setGeometry(QRect(40, 100, 271, 591))
         font1 = QFont()
         font1.setFamilies([u"Outfit"])
         font1.setPointSize(15)
         self.tw_directory.setFont(font1)
         self.tw_directory.setStyleSheet(u"background-color: rgb(68, 64, 61);\n"
 "border-radius: 30px;")
-        self.tw_directory.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.tw_directory.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.lb_partionInfo = QLabel(self.groupBox)
         self.lb_partionInfo.setObjectName(u"lb_partionInfo")
         self.lb_partionInfo.setGeometry(QRect(350, 100, 511, 361))
@@ -79,6 +80,7 @@ class Ui_Partion_Window(object):
 "border-radius: 30px;\n"
 "color: rgb(255, 255, 255);\n"
 "padding: 15px;")
+        self.lb_info.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
         self.scrollArea = QScrollArea(self.groupBox)
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setGeometry(QRect(360, 110, 491, 341))
@@ -112,6 +114,6 @@ class Ui_Partion_Window(object):
         ___qtreewidgetitem = self.tw_directory.headerItem()
         ___qtreewidgetitem.setText(0, QCoreApplication.translate("Partion_Window", u"Folders and Files", None));
         self.lb_partionInfo.setText(QCoreApplication.translate("Partion_Window", u"This is where text show", None))
-        self.lb_info.setText(QCoreApplication.translate("Partion_Window", u"TextLabel", None))
+        self.lb_info.setText(QCoreApplication.translate("Partion_Window", u"Select a file to see information", None))
     # retranslateUi
 

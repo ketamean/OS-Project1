@@ -4,6 +4,24 @@ from NTFS import NTFS
 from FAT32 import FAT32
 
 import OSItem
+
+extensions = {
+      "txt": "Text Editor (e.g., Notepad, Sublime Text)",
+      "docx": "Word Processor (e.g., Microsoft Word, LibreOffice Writer)",
+      "xlsx": "Spreadsheet (e.g., Microsoft Excel, LibreOffice Calc)",
+      "pptx": "Presentation Software (e.g., Microsoft PowerPoint, LibreOffice Impress)",
+      "pdf": "PDF Reader (e.g., Adobe Acrobat Reader, Foxit Reader)",
+      "jpg": "Image Viewer (e.g., Windows Photos, GIMP)",
+      "png": "Image Viewer (e.g., Windows Photos, GIMP)",
+      "bmp": "Image Viewer (e.g., Windows Photos, GIMP)",
+      "gif": "Image Viewer (e.g., Windows Photos, GIMP)",
+      "mp3": "Audio Player (e.g., Windows Media Player, VLC media player)",
+      "mp4": "Video Player (e.g., Windows Media Player, VLC media player)",
+      "avi": "Video Player (e.g., Windows Media Player, VLC media player)",
+      "zip": "Archive Tool (e.g., WinRAR, 7-Zip)",
+      "rar": "Archive Tool (e.g., WinRAR, 7-Zip)",
+  }
+
 class PartitionWindow(QtWidgets.QWidget):
   volume_letter = ""
   root:any
@@ -12,28 +30,34 @@ class PartitionWindow(QtWidgets.QWidget):
     super().__init__()
     self.ui = Ui_Partion_Window()
     self.ui.setupUi(self)
+    self.ui.lb_partionInfo.setWordWrap(True)
     self.ui.tw_directory.itemDoubleClicked.connect(self.handle_item_doubleClicked)
   
   @QtCore.Slot()
   def handle_item_doubleClicked(self, item:QtWidgets.QTreeWidgetItem):
-    self.ui.lb_info.setText(item.text(0))
+    
     my_osItem: OSItem.OSItem = item.data(0,QtCore.Qt.UserRole)
+
+    lb_info:str = f'File:\t\t\t\t{item.text(0)}\nSize:\t\t\t\t{my_osItem.size}\nLast Modified:\t\t\t{my_osItem.latestModificationDay['day']}/{my_osItem.latestModificationDay['month']}/{my_osItem.latestModificationDay['year']}'
+    self.ui.lb_info.setText(lb_info)
+
     if (isinstance(my_osItem, OSItem.OSFile)):
-      if (my_osItem.extension == "txt"):
+      if (my_osItem.extension.lower() == "txt"):
         self.ui.lb_partionInfo.setText(my_osItem.data)
+      elif my_osItem.extension.lower() in extensions:
+        self.ui.lb_partionInfo.setText('This is not a text file.\n You can use other software to open: ' + extensions[my_osItem.extension.lower()])
       else:
-        self.ui.lb_partionInfo.setText('This is not a text file')
+        self.ui.lb_partionInfo.setText('This is not a text file. Unknown extension.')
+
 
   def backend_init(self, drive_letter, disk_type):
     self.volume_letter = drive_letter
     with open ('\\\\.\\' + drive_letter, 'rb') as f:
       if (disk_type == "NTFS"):
         self.volume_instance = NTFS(f)
-        self.root = self.volume_instance.getDirectoryTree()
       else:
         self.volume_instance = FAT32(f)
-        self.volume_instance.root_directory.get_ositem()
-      
+      self.root = self.volume_instance.getDirectoryTree()      
     dictionary1 = self.volume_instance.getInfo(get_vbr_info_only=False)
     dictionary2 = self.root.getInfo()
     partion_info_text:str = f'Name: {dictionary2['name']}\n'

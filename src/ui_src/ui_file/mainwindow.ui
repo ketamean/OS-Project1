@@ -26,10 +26,10 @@
       <widget class="QLabel" name="lb_introduction">
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>493</y>
-         <width>891</width>
-         <height>151</height>
+         <x>110</x>
+         <y>480</y>
+         <width>181</width>
+         <height>71</height>
         </rect>
        </property>
        <property name="font">
@@ -39,7 +39,7 @@
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
+        <string notr="true">color: rgb(239, 109, 23);</string>
        </property>
        <property name="text">
         <string>Group Members:</string>
@@ -62,7 +62,7 @@
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
+        <string notr="true">color: rgb(239, 109, 23);</string>
        </property>
        <property name="text">
         <string>Volume</string>
@@ -88,7 +88,7 @@
         <enum>Qt::LeftToRight</enum>
        </property>
        <property name="styleSheet">
-        <string notr="true">color: rgb(255, 255, 255);</string>
+        <string notr="true">color: rgb(239, 109, 23);</string>
        </property>
        <property name="text">
         <string>Application Features</string>
@@ -142,6 +142,94 @@ padding: 15px;</string>
 border-radius: 30px;
 padding: 15px;
 color: rgb(255, 255, 255);</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="lb_introduction_2">
+       <property name="geometry">
+        <rect>
+         <x>110</x>
+         <y>590</y>
+         <width>261</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Outfit</family>
+         <pointsize>15</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(255, 255, 255);</string>
+       </property>
+       <property name="text">
+        <string>22127459 - Pham Thanh Vinh</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="lb_introduction_3">
+       <property name="geometry">
+        <rect>
+         <x>510</x>
+         <y>540</y>
+         <width>301</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Outfit</family>
+         <pointsize>15</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(255, 255, 255);</string>
+       </property>
+       <property name="text">
+        <string>22127357 − Pham Tran Yen Quyen</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="lb_introduction_4">
+       <property name="geometry">
+        <rect>
+         <x>510</x>
+         <y>590</y>
+         <width>301</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Outfit</family>
+         <pointsize>15</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(255, 255, 255);</string>
+       </property>
+       <property name="text">
+        <string>22127488 − Truong Thanh Toan</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="lb_introduction_5">
+       <property name="geometry">
+        <rect>
+         <x>110</x>
+         <y>540</y>
+         <width>301</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Outfit</family>
+         <pointsize>15</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color: rgb(255, 255, 255);</string>
+       </property>
+       <property name="text">
+        <string>22127402 − Be La Anh Thu</string>
        </property>
       </widget>
      </widget>

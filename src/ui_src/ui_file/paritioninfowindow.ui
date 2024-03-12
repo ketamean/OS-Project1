@@ -38,7 +38,7 @@
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: rgb(255, 255, 255);</string>
+       <string notr="true">color: rgb(239, 109, 23);</string>
       </property>
       <property name="text">
        <string>Tree Directory</string>
@@ -60,7 +60,7 @@
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: rgb(255, 255, 255);</string>
+       <string notr="true">color: rgb(239, 109, 23);</string>
       </property>
       <property name="text">
        <string>Partition Information</string>
@@ -82,7 +82,8 @@
        </font>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: rgb(255, 255, 255);</string>
+       <string notr="true">
+color: rgb(239, 109, 23);</string>
       </property>
       <property name="text">
        <string>Information</string>
@@ -93,8 +94,8 @@
        <rect>
         <x>40</x>
         <y>100</y>
-        <width>256</width>
-        <height>361</height>
+        <width>271</width>
+        <height>591</height>
        </rect>
       </property>
       <property name="font">
@@ -108,7 +109,7 @@
 border-radius: 30px;</string>
       </property>
       <property name="horizontalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOn</enum>
+       <enum>Qt::ScrollBarAsNeeded</enum>
       </property>
       <column>
        <property name="text">
@@ -170,7 +171,10 @@ color: rgb(255, 255, 255);
 padding: 15px;</string>
       </property>
       <property name="text">
-       <string>TextLabel</string>
+       <string>Select a file to see information</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
       </property>
      </widget>
      <widget class="QScrollArea" name="scrollArea">
