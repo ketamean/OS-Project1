@@ -47,21 +47,21 @@ class MFTEntry:
 
     FILE_NAME_FLAG = {                  # store the flag name with its corresponding position 1-bit (0-based) in the flag
         # fyi: https://flatcap.github.io/linux-ntfs/ntfs/attributes/file_name.html
-        0   : 'R',  # Read-only
-        1   : 'H',  # Hidden
-        2   : 'S',  # System
-        5   : 'A',  # Archvie
+        0x0001  : 'R',  # Read-only
+        0x0002  : 'H',  # Hidden
+        0x0004  : 'S',  # System
+        0x0020  : 'A',  # Archvie
 
         # these following flags will be ignored
-        6   : 'D',      # Device
-        7   : 'N',      # Normal
-        8   : 'T',      # Temporary
-        9   : 'SF',     # Sparse File
-        10  : 'RP',     #
-        11  : 'C',      #
-        12  : 'O',      #
-        13  : 'NCI',    #
-        14  : 'E',      #
+        0x0040  : 'D',      # Device
+        0x0080  : 'N',      # Normal
+        0x0100  : 'T',      # Temporary
+        0x0200  : 'SF',     # Sparse File
+        0x0400  : 'RP',     #
+        0x0800  : 'C',      #
+        0x1000  : 'O',      #
+        0x2000  : 'NCI',    #
+        0x4000  : 'E',      #
     }
 
     @staticmethod
@@ -82,21 +82,15 @@ class MFTEntry:
     def __convert_flag_to_status(flag):
         """
             convert a given flag in the $FILE_NAME attribute to a list of properties such as Read-only, Hidden, System, Archive,...
-            the argument `flag` must be a string in hex
+            the argument `flag` is a decoded number
             each status will be represented by its first letter
         """
         
         res = []
-        flag = HexToBin(flag)
-        n = 0
-        for i in flag:
-            if i == '1':
-                n += 1
         for i in MFTEntry.FILE_NAME_FLAG.keys():
-            if i > 5:
+            if i > 0x20:
                 break
-            if flag[len(flag) - 1 - i] == '1':
-                # the ith bit from the right (0-based: the rightmost bit is the 0th bit)
+            if flag & i == i:
                 res.append(MFTEntry.FILE_NAME_FLAG[i])
         return res
         
@@ -302,7 +296,9 @@ class MFTEntry:
         content_size    = int.from_bytes(bytes=attr_buffer[16:20], byteorder='little')
         begin_content   = int.from_bytes(bytes=attr_buffer[20:22], byteorder='little')
         self.parent_id  = int.from_bytes(bytes=attr_buffer[begin_content:begin_content + 6], byteorder='little')
-        self.status     = MFTEntry.__convert_flag_to_status(flag=attr_buffer[56:60].hex())
+        self.status     = MFTEntry.__convert_flag_to_status(
+            flag=int.from_bytes(bytes=attr_buffer[0x38:0x38 + 4], byteorder='little')
+        )
         len_name        = int.from_bytes(bytes=attr_buffer[begin_content + 64:begin_content + 65], byteorder='little')
         # # test
         # print('filename.name_buffer:',attr_buffer[begin_content + 66:begin_content + 66 + 2*len_name])
@@ -430,17 +426,12 @@ class NTFS(AbstractVolume):
                 byte_per_record=self.nBytesPerFileRecord,
                 byte_per_sector=self.nBytesPerSector
             )
-            # đọc trong MFT (MFT coi như một mảng), record nào hợp lệ ((id > 24 or id == 5) and parent hợp lệ) thì mới được đưa vào
-            # Khi đọc thì sẽ gặp parent trước. Nếu parent không hợp lệ => không được đưa vào list => không xuất hiện trong list <=> get() == None
-            # => cái entry hiện tại đang xét cũng không cần quan tâm luôn
+
+            # khi đọc các entry, có thể sẽ gặp con trước khi gặp cha nên không tiện kiểm tra tính hợp lệ của cha (xem cha của cha có hợp lệ không)
             if (
                 entry.in_use and
                 entry.id and (entry.id > 24 or entry.id == 5) and
-                entry.parent_id and (entry.parent_id > 24 or entry.parent_id == 5) and
-                ( ################################ mới thêm điều kiện này
-                    self.__id_to_entry.get(entry.parent_id) or
-                    entry.parent_id == 5
-                )
+                entry.parent_id and (entry.parent_id > 24 or entry.parent_id == 5)
             ):
                 self.__id_to_entry[entry.id]    = entry
                 self.__entry_to_id[entry]       = entry.id
@@ -493,12 +484,12 @@ class NTFS(AbstractVolume):
                 self.volume_name    = entry.volume_name
             if entry.name == '$MFT':
                 n_entry             = entry.data_real_size // self.nBytesPerFileRecord
-            
+
             n_entry -= 1
             cnt     += 1
 
-            # print(entry.name)
-            # print('\t >', entry.status)
+            # if entry.status:
+            #     print(entry.name, entry.status)
 
 
     def __build_directory_tree(self):
@@ -511,9 +502,12 @@ class NTFS(AbstractVolume):
         for id, ositem in self.__id_to_ositem.items():
             if id == 5:
                 continue
-            parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
-            # print(ositem.name, 'in', parent_ositem.name)
-            parent_ositem.children.append(ositem)
+            try:
+                parent_ositem = self.__id_to_ositem[ self.__id_to_entry[id].parent_id ]  
+                # print(ositem.name, 'in', parent_ositem.name)
+                parent_ositem.children.append(ositem)
+            except:
+                pass
         
         self.__root = self.__id_to_ositem[5]
 
