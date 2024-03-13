@@ -44,7 +44,7 @@ class Ui_Partion_Window(object):
         self.label_2.setStyleSheet(u"color: rgb(239, 109, 23);")
         self.label_3 = QLabel(self.groupBox)
         self.label_3.setObjectName(u"label_3")
-        self.label_3.setGeometry(QRect(370, 500, 181, 41))
+        self.label_3.setGeometry(QRect(370, 480, 181, 41))
         self.label_3.setFont(font)
         self.label_3.setStyleSheet(u"\n"
 "color: rgb(239, 109, 23);")
@@ -66,7 +66,7 @@ class Ui_Partion_Window(object):
         self.lb_partionInfo.setGeometry(QRect(350, 100, 511, 361))
         font2 = QFont()
         font2.setFamilies([u"Outfit"])
-        font2.setPointSize(13)
+        font2.setPointSize(11)
         self.lb_partionInfo.setFont(font2)
         self.lb_partionInfo.setStyleSheet(u"background-color: rgb(68, 64, 61);\n"
 "border-radius: 30px;\n"
@@ -74,8 +74,8 @@ class Ui_Partion_Window(object):
 "padding: 15px;")
         self.lb_info = QLabel(self.groupBox)
         self.lb_info.setObjectName(u"lb_info")
-        self.lb_info.setGeometry(QRect(350, 560, 511, 131))
-        self.lb_info.setFont(font1)
+        self.lb_info.setGeometry(QRect(350, 530, 511, 161))
+        self.lb_info.setFont(font2)
         self.lb_info.setStyleSheet(u"background-color: rgb(68, 64, 61);\n"
 "border-radius: 30px;\n"
 "color: rgb(255, 255, 255);\n"

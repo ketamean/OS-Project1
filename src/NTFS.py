@@ -525,8 +525,8 @@ class NTFS(AbstractVolume):
         if not get_vbr_info_only:
             res['Starting cluster of Master File Table']    = self.startingClusterMFT
             res['OEMID']                                    = self.OEMID
-            res['Number of bytes per file record']          = self.nBytesPerFileRecord + ' byte' + ('s' if self.nBytesPerFileRecord >= 2 else '')
-            res['Number of cluster per index buffer']       = self.nClustersPerIndexBuffer + ' cluster' + ('s' if self.nClustersPerIndexBuffer >= 2 else '')
+            res['Number of bytes per file record']          = str(self.nBytesPerFileRecord) + ' byte' + ('s' if self.nBytesPerFileRecord >= 2 else '')
+            res['Number of cluster per index buffer']       = str(self.nClustersPerIndexBuffer) + ' cluster' + ('s' if self.nClustersPerIndexBuffer >= 2 else '')
             res['Volume serial number']                     = self.volumeSerialNum
         return res
 

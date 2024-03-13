@@ -38,7 +38,11 @@ class PartitionWindow(QtWidgets.QWidget):
     
     my_osItem: OSItem.OSItem = item.data(0,QtCore.Qt.UserRole)
 
-    lb_info:str = f'File:\t\t\t\t{item.text(0)}\nLast Modified:\t\t\t{my_osItem.latestModificationDay['day']}/{my_osItem.latestModificationDay['month']}/{my_osItem.latestModificationDay['year']}' + (f'\nSize:\t\t\t\t{my_osItem.size}' if isinstance(my_osItem, OSItem.OSFile) else '')
+    lb_info= ''
+
+    for key,value in my_osItem.getInfo().items():
+      lb_info += (f'{key}: {value}\n')
+
     self.ui.lb_info.setText(lb_info)
 
     if (isinstance(my_osItem, OSItem.OSFile)):
@@ -48,7 +52,8 @@ class PartitionWindow(QtWidgets.QWidget):
         self.ui.lb_partionInfo.setText('This is not a text file.\n You can use other software to open: ' + extensions[my_osItem.extension.lower()])
       else:
         self.ui.lb_partionInfo.setText('This is not a text file. Unknown extension.')
-
+    else:
+      self.ui.lb_partionInfo.setText('This is a folder.')
 
   def backend_init(self, drive_letter, disk_type):
     self.volume_letter = drive_letter
@@ -60,7 +65,7 @@ class PartitionWindow(QtWidgets.QWidget):
       self.root = self.volume_instance.getDirectoryTree()      
     dictionary1 = self.volume_instance.getInfo(get_vbr_info_only=False)
     dictionary2 = self.root.getInfo()
-    partion_info_text:str = f'Name: {dictionary2['name']}\n'
+    partion_info_text:str = f'Name: {dictionary2['Name']}\n'
     for (key, value) in dictionary1.items():
       partion_info_text += f'{key}: {value}\n'
     self.ui.lb_partionInfo.setText(partion_info_text)
