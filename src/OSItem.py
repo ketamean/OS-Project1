@@ -81,19 +81,29 @@ class OSItem(object):
         self.idxStartingCluster             = idxStartingCluster
         self.size                           = size
 
+    @staticmethod
+    def __convertSizeFromBytes(sz):
+        order = ['B', 'KB', 'MB', 'GB']
+        cnt_order = 0
+        while cnt_order < len(order):
+            if sz <= 1024:
+                break
+            print(sz, order[cnt_order])
+            sz = sz / 1024
+            cnt_order += 1
+        return str(sz) + ' ' + (order[cnt_order] if cnt_order < len(order) else order[cnt_order - 1])
     def getInfo(self):
         """
             trả về toàn bộ thông tin của object
         """
         return {
-            'name'                  : self.name,
-            'status'                : self.status,
-            'createdTime'           : self.createdTime,
-            'createdDate'           : self.createdDate,
-            'createdDate'           : self.latestAccessDay,
-            'latestModificationDay' : self.latestModificationDay,
-            'idxStartingCluster'    : self.idxStartingCluster,
-            'size'                  : self.size,
+            'Name'                      : self.name,
+            'Status'                    : self.status,
+            'Created time'              : str(self.createdTime['hour']) + ':' + str(self.createdTime['minute']) + ':' + str(self.createdTime['second']) + '.' + str(self.createdTime['millisecond']) + ', ' + str(self.createdDate['day']) + '/' + str(self.createdDate['month']) + '/' + str(self.createdDate['year']) + ' (dd/mm/yyyy)',
+            'Latest access time'        : str(self.latestAccessDay['day']) + '/' + str(self.latestAccessDay['month']) + '/' + str(self.latestAccessDay['year']) + ' (dd/mm/yyyy)',
+            'Latest modification time'  : str(self.latestModificationDay['day']) + '/' + str(self.latestModificationDay['month']) + '/' + str(self.latestModificationDay['year']) + ' (dd/mm/yyyy)',
+            'Starting cluster'          : str(self.idxStartingCluster),
+            'Size'                      : OSItem.__convertSizeFromBytes(self.size),
         }
 
     def access(self):
@@ -117,17 +127,12 @@ class OSFile(OSItem):
         self.data      = data
         super().__init__(name, status, createdTime_hour, createdTime_minute, createdTime_second, createdTime_millisecond, createdDate_day, createdDate_month, createdDate_year, latestAccessDay_day, latestAccessDay_month, latestAccessDay_year, latestModificationDay_day, latestModificationDay_month, latestModificationDay_year, idxStartingCluster, size)
     
-    def access(self, lvl):
-        # # these following commented lines are for testing
-        tab = ''
-        for i in range(lvl):
-            tab += '\t'
-        print(tab + self.name + '.' + self.extension)
+    def access(self):
         pass
 
     def getInfo(self):
         res = super().getInfo()
-        res['extension'] = self.extension
+        res['Name'] = self.name + '.' + self.extension
         return res
 
 class OSFolder(OSItem):
@@ -142,15 +147,13 @@ class OSFolder(OSItem):
     def addChild(self, ositem: OSItem):
         self.children.append(ositem)
     
-    def access(self, lvl):
-        # # these following commented lines are for testing
-        tab = ''
-        for i in range(lvl):
-            tab += '\t' 
-        print(tab + self.name)
-        for child in self.children:
-            child.access(lvl + 1)
+    def access(self):
         pass
+    
+    def getInfo(self):
+        res = super().getInfo()
+        res['Size'] = '-'
+        return res
 
 if __name__ == '__main__':
     # test initializers

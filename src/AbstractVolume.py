@@ -43,12 +43,11 @@ class AbstractVolume:
     
     def getInfo(self):
         return {
-            'Number of bytes per sector'                : self.nBytesPerSector,
-            'Number of sectors per cluster'             : self.nSectorsPerCluster,
-            'Number of sectors on boot sector region'   : self.nSectorsOnBootSector,
-            'Number of sectors per track'               : self.nSectorPerTrack,
-            'Number of head on disk'                    : self.nHead,
-            'Total size of the volume'                  : self.sizeVolume,
+            'Number of bytes per sector'                : str(self.nBytesPerSector) + ' byte' + ('s' if self.nBytesPerSector >= 2 else ''),
+            'Number of sectors per cluster'             : str(self.nSectorsPerCluster) + ' sector' + ('s' if self.nSectorsPerCluster >= 2 else ''),
+            'Number of sectors on boot sector region'   : str(self.nSectorsOnBootSector) + ' sector' + ('s' if self.nSectorsOnBootSector >= 2 else ''),
+            'Number of sectors per track'               : str(self.nSectorPerTrack) + ' sector' + ('s' if self.nSectorPerTrack >= 2 else ''),
+            'Number of head on disk'                    : str(self.nHead) + ' head' + ('s' if self.nHead >= 2 else ''),
+            'Total size of the volume'                  : str(self.sizeVolume) + ' sector' + ('s' if self.sizeVolume >= 2 else ''),
             'Partition type'                            : self.partitionType,
         }
-    
