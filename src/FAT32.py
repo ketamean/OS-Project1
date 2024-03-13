@@ -78,8 +78,8 @@ class FAT32(AbstractVolume):
     def getInfo(self, get_vbr_info_only = True):
         res = super().getInfo()
         if not get_vbr_info_only:
-            res['Number of FAT'] = self.nFatTable
-            res['Size of each FAT'] = self.sizeFatTable
+            res['Number of FAT'] = str(self.nFatTable) + ' table' + ('s' if self.nFatTable >= 2 else '')
+            res['Size of each FAT'] = str(self.sizeFatTable) + ' cluster' + ('s' if self.nFatTable >= 2 else '')
             res['Starting cluster of RDET'] = self.rdetStartCluster
             res['Starting cluster of data region'] = self.dataStartSector
         return res
